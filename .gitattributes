@@ -1,0 +1,13 @@
+# Normalise line endings: LF in the repo and in every checkout.
+# Without this a Windows commit ships make.sh with CRLF and Linux/Mac
+# clones fail with: bad interpreter: /bin/bash^M
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.py   text eol=lf
+*.md   text eol=lf
+*.srt  text eol=lf
+
+*.ttf  binary
+*.png  binary
+*.mp4  binary

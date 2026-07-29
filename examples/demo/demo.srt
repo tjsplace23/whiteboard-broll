@@ -1,0 +1,23 @@
+1
+00:00:01,000 --> 00:00:05,000
+Every tutorial tells you to paste your script into the box.
+
+2
+00:00:07,000 --> 00:00:12,000
+It cut off at twelve thousand four hundred and thirty-one characters.
+
+3
+00:00:15,000 --> 00:00:20,000
+So here is the whole pipeline, start to finish.
+
+4
+00:00:23,000 --> 00:00:28,000
+Do this before you do anything else today.
+
+5
+00:00:31,000 --> 00:00:36,000
+Created to completed in six minutes and forty-one seconds.
+
+6
+00:00:39,000 --> 00:00:44,000
+That is the whole thing. I'll see you in the next one.

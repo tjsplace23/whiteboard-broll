@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.DS_Store
+
+# build output
+clips/
+parts/
+timeline.json
+composite.sh
+examples/demo/a-roll.mp4
+examples/demo/FINAL.mp4

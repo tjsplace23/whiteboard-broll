@@ -1,0 +1,11 @@
+The bundled fonts are licensed under the SIL Open Font License, Version 1.1.
+
+  Caveat            (c) The Caveat Project Authors
+  Patrick Hand      (c) The Patrick Hand Project Authors
+  Roboto Mono       (c) The Roboto Mono Project Authors
+
+Full licence text: https://openfontlicense.org
+
+You may use, study, modify and redistribute these fonts, including in
+commercial work. You may not sell them on their own, and any modified
+version must not use the Reserved Font Names above.
