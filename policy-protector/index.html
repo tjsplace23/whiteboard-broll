@@ -51,6 +51,7 @@ body{background:var(--sky);color:var(--ivory);font-family:var(--body);overflow:h
 .overlay{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(30,12,60,.38);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-block:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-bottom,0px));box-sizing:border-box}
+.card.wide{max-width:720px}
 .card{background:linear-gradient(180deg,var(--purple-2),var(--purple));border:4px solid var(--gold);border-radius:22px;
   box-shadow:0 10px 0 rgba(30,12,60,.45),0 24px 50px rgba(0,0,0,.3);width:100%;max-width:420px;max-height:100%;overflow:auto;box-sizing:border-box;
   padding:22px 22px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -89,6 +90,30 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 .quiz .qa{font-size:14px;font-weight:600}
 .fine{font-size:11.5px;line-height:1.35;color:#c9b6ef;max-width:40ch;margin:0}
 .code{font-family:var(--display);font-size:34px;letter-spacing:.12em;color:var(--purple);background:var(--ivory);border:3px dashed var(--gold);border-radius:12px;padding:4px 16px;-webkit-user-select:text;user-select:text}
+.legend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.chip{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.2);border-radius:999px;padding:3px 10px 3px 4px;font-size:13px;font-weight:800}
+.sw{width:18px;height:18px;border-radius:5px;border:2px solid rgba(255,255,255,.5)}
+.sw.wood{background:#c8323c}.sw.glass{background:rgba(190,234,255,.55)}.sw.rubber{background:#ff3d7f}.sw.feather{background:#ffe680}
+#toast{position:fixed;left:50%;top:max(64px,calc(env(safe-area-inset-top,0px) + 56px));transform:translateX(-50%);z-index:4;background:var(--purple);
+  border:3px solid var(--gold);border-radius:14px;padding:8px 14px;font-weight:800;font-size:15px;display:flex;gap:8px;align-items:center;
+  box-shadow:0 4px 0 rgba(30,12,60,.35);max-width:calc(100% - 32px);box-sizing:border-box;pointer-events:none}
+.league{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.league td{padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.12);text-align:left}
+.league td.n{width:30px;color:var(--gold);font-family:var(--display);font-size:17px}
+.league td.s{text-align:right;font-weight:800}
+.league tr.me td{background:rgba(242,182,50,.22);color:#fff}
+.league tr.me td:first-child{border-radius:8px 0 0 8px}.league tr.me td:last-child{border-radius:0 8px 8px 0}
+.cpu{font-size:10px;font-weight:800;letter-spacing:.06em;background:rgba(255,255,255,.16);color:#d9c9f5;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1px}
+.rank{font-family:var(--display);font-size:22px;color:var(--ivory)}
+.rank .up{color:#6ee7a8}.rank .dn{color:#ff8a8a}
+.field{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:800}
+.field input{font:inherit;font-size:16px;border-radius:10px;border:2px solid var(--gold);padding:5px 10px;width:150px;background:var(--ivory);color:var(--purple)}
+.agentTbl{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.agentTbl th,.agentTbl td{padding:4px 5px;border-bottom:1px solid rgba(255,255,255,.14);text-align:right;white-space:nowrap}
+.agentTbl th:first-child,.agentTbl td:first-child{text-align:left}
+.agentTbl th{color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.tblwrap{width:100%;overflow-x:auto}
+.lvl-c{color:#6ee7a8}.lvl-e{color:var(--gold)}.lvl-k{color:#c9b6ef}
 @media (prefers-reduced-motion:reduce){.pop,.stars span.on{animation:none}}
 </style>
 
@@ -96,7 +121,7 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 
 <div class="hud" id="top">
   <div class="pill" id="lvl"><small>Level</small>1</div>
-  <div id="prog" aria-label="Risks cleared"><div id="progFill"></div><div id="progTxt">0 / 0 risks</div></div>
+  <div id="prog" aria-label="Blocks cleared"><div id="progFill"></div><div id="progTxt">0 / 0 blocks</div></div>
   <button type="button" id="iconBtn" aria-label="Restart level">↻</button>
 </div>
 <div class="hud" id="bottom">
@@ -107,10 +132,17 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
   <div class="card" role="dialog" aria-labelledby="t1">
     <svg class="crown" viewBox="0 0 84 60" aria-hidden="true"><path d="M42 4 L72 14 C72 36 60 50 42 57 C24 50 12 36 12 14 Z" fill="#f2b632" stroke="#1e0c3c" stroke-width="3" stroke-linejoin="round"/><path d="M30 30 L39 39 L56 21" fill="none" stroke="#3b1f6b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <h1 id="t1">Policy Protector</h1>
-    <p>Fire, floods, theft, crashes: life throws risks at your family. Tap where you want the cannonball to go and knock <b>every risk</b> off the platform before you run out.</p>
+    <p>Tap where you want the cannonball to go and knock <b>every block</b> off the platform before you run out. Clear a level, then test your insurance know-how.</p>
+    <div class="legend" aria-label="Block types">
+      <span class="chip"><span class="sw wood"></span>Wood</span>
+      <span class="chip"><span class="sw glass"></span>Glass shatters</span>
+      <span class="chip"><span class="sw rubber"></span>Rubber bounces</span>
+      <span class="chip"><span class="sw feather"></span>Feather flies</span>
+    </div>
     <p class="sub" id="startSub">Fewer balls used, more stars earned.</p>
     <div class="row">
       <button type="button" class="btn" id="playBtn">Play level 1</button>
+      <button type="button" class="btn alt" id="leagueBtn">Rankings</button>
       <button type="button" class="btn alt" id="resetBtn" hidden>Start over</button>
     </div>
     <p class="sub" id="prizeHave" hidden></p>
@@ -120,9 +152,11 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 
 <div id="winO" class="overlay" hidden>
   <div class="card" role="dialog" aria-labelledby="t2">
-    <h2 id="t2">Risks cleared!</h2>
+    <h2 id="t2">Level cleared!</h2>
     <div class="stars" id="stars" aria-label="Stars"><span>★</span><span>★</span><span>★</span></div>
     <div class="stat"><div><b id="wBalls">0</b><span>Balls left</span></div><div><b id="wScore">0</b><span>Score</span></div></div>
+    <div class="rank" id="wRank"></div>
+    <table class="league" id="wLeague"></table>
     <div class="quiz" id="quiz">
       <span class="tag">Quick insurance question</span>
       <p class="q" id="qText"></p>
@@ -148,10 +182,34 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 <div id="loseO" class="overlay" hidden>
   <div class="card" role="dialog" aria-labelledby="t3">
     <h2 id="t3">Out of cannonballs</h2>
-    <p id="loseTxt">3 risks are still standing.</p>
+    <p id="loseTxt">3 blocks are still standing.</p>
     <div class="row"><button type="button" class="btn" id="retryBtn">Try again</button></div>
   </div>
 </div>
+<div id="leagueO" class="overlay" hidden>
+  <div class="card" role="dialog" aria-labelledby="t5">
+    <h2 id="t5">Rankings</h2>
+    <div class="field"><label for="nick">Your nickname</label><input id="nick" maxlength="16" autocomplete="off"></div>
+    <table class="league" id="fullLeague"></table>
+    <p class="fine">Players marked CPU are computer rivals for practice, not real people. Your score is the total of your best score on each level.</p>
+    <div class="row"><button type="button" class="btn" id="leagueClose">Back</button></div>
+  </div>
+</div>
+
+<div id="agentO" class="overlay" hidden>
+  <div class="card wide" role="dialog" aria-labelledby="t6">
+    <h2 id="t6">Agent view</h2>
+    <p class="sub">Players on this device only. Nothing leaves the device. Higher score means a more competitive player.</p>
+    <div class="tblwrap"><table class="agentTbl" id="agentTbl"></table></div>
+    <div class="row">
+      <button type="button" class="btn" id="nextPlayerBtn">Save player, start fresh</button>
+      <button type="button" class="btn alt" id="clearRecBtn">Clear records</button>
+      <button type="button" class="btn alt" id="agentClose">Close</button>
+    </div>
+    <p class="fine">Competitive score (0–100) adds up retries, replays to earn more stars, checks of the rankings, and levels past 5.</p>
+  </div>
+</div>
+<div id="toast" hidden></div>
 <div id="err" hidden>The 3D engine couldn't load. Check your connection and reload the page.</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -191,6 +249,22 @@ const G=20;                       // gravity
 const BALL_R=.45;
 const PAL={purple:0x6b3fa0,crimson:0xc8323c,blue:0x2f6fb5,ivory:0xefe2c4,green:0x2e9d6b,gold:0xf2b632};
 const COLS=[PAL.purple,PAL.crimson,PAL.blue,PAL.ivory,PAL.green];
+// block types: glass shatters on a hard hit, rubber bounces, feather is light and slams into neighbours
+const KIND={
+  wood:{mass:.8},
+  glass:{mass:.6,color:0xbfeaff},
+  rubber:{mass:1,color:0xff3d7f},
+  feather:{mass:.12,color:0xffe680},
+};
+const INTRO={glass:'Glass shatters when hit hard',rubber:'Rubber bounces and knocks into others',feather:'Feather blocks are light and fly fast'};
+// share of 1x1 blocks of each type per level; level 1 is all wood
+function mixFor(n){
+  if(n===1)return{};
+  if(n===2)return{glass:.5};
+  if(n===3)return{rubber:.4};
+  if(n===4)return{feather:.4};
+  return{glass:.2,rubber:.15,feather:.15};
+}
 
 // ------------------------------------------------------------------ renderer + scene
 const cv=$('cv');
@@ -261,46 +335,72 @@ world.gravity.set(0,-G,0);
 world.broadphase=new CANNON.SAPBroadphase(world);
 world.solver.iterations=14;
 world.allowSleep=true;
-const mBlock=new CANNON.Material('block'),mBall=new CANNON.Material('ball'),mStone=new CANNON.Material('stone');
+const mBlock=new CANNON.Material('block'),mBall=new CANNON.Material('ball'),mStone=new CANNON.Material('stone'),mRubber=new CANNON.Material('rubber');
 world.addContactMaterial(new CANNON.ContactMaterial(mBlock,mBlock,{friction:.35,restitution:.05}));
 world.addContactMaterial(new CANNON.ContactMaterial(mBlock,mStone,{friction:.22,restitution:.05}));
 world.addContactMaterial(new CANNON.ContactMaterial(mBall,mBlock,{friction:.3,restitution:.25}));
 world.addContactMaterial(new CANNON.ContactMaterial(mBall,mStone,{friction:.3,restitution:.35}));
+for(const m of [mBlock,mBall,mStone,mRubber])world.addContactMaterial(new CANNON.ContactMaterial(mRubber,m,{friction:.6,restitution:m===mBall?.9:.8}));
 {const b=new CANNON.Body({mass:0,material:mStone});b.addShape(new CANNON.Box(new CANNON.Vec3(PW/2,.5,PD/2)));b.position.set(0,-.5,PZ);world.addBody(b)}
 
 // ------------------------------------------------------------------ blocks
 let blocks=[],balls=[];
 const geoCache={},matCache={};
 const edgeMat=new THREE.LineBasicMaterial({color:0x1e0c3c,transparent:true,opacity:.35});
+const kindMats={
+  glass:mat(KIND.glass.color,{transparent:true,opacity:.42,roughness:.05,metalness:.2,depthWrite:false}),
+  rubber:mat(KIND.rubber.color,{roughness:.95}),
+  feather:mat(KIND.feather.color,{roughness:.8,emissive:0x2a2200}),
+};
+const glassEdge=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.9});
+let mixRng=Math.random,mix={};
+function pickKind(){let r=mixRng();for(const k in mix){if(r<mix[k])return k;r-=mix[k]}return'wood'}
 function addBlock(w,h,d,x,y,z,color,o={}){
   const key=w+'x'+h+'x'+d;
   if(!geoCache[key])geoCache[key]={g:new THREE.BoxGeometry(w,h,d),e:new THREE.EdgesGeometry(new THREE.BoxGeometry(w,h,d))};
   if(!matCache[color])matCache[color]=mat(color,color===PAL.gold?{metalness:.12,roughness:.35,emissive:0x3a2600}:{});
-  const mesh=new THREE.Mesh(geoCache[key].g,w===1&&h===1&&d===1?riskMat(color):matCache[color]);mesh.castShadow=mesh.receiveShadow=true;
-  mesh.add(new THREE.LineSegments(geoCache[key].e,edgeMat));
+  const kind=o.kind||'wood';
+  const mesh=new THREE.Mesh(geoCache[key].g,kindMats[kind]||matCache[color]);mesh.castShadow=kind!=='glass';mesh.receiveShadow=true;
+  mesh.add(new THREE.LineSegments(geoCache[key].e,kind==='glass'?glassEdge:edgeMat));
   if(o.crown)mesh.add(crownDeco(w,h));
   scene.add(mesh);
-  const body=new CANNON.Body({mass:w*h*d*(o.heavy?1.6:.8),material:mBlock,sleepSpeedLimit:.25,sleepTimeLimit:.6,linearDamping:.04,angularDamping:.06});
+  const body=new CANNON.Body({mass:o.heavy?w*h*d*1.6:w*h*d*KIND[kind].mass,material:kind==='rubber'?mRubber:mBlock,sleepSpeedLimit:.25,sleepTimeLimit:.6,
+    linearDamping:kind==='feather'?.01:.04,angularDamping:.06});
   body.addShape(new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2)));
   body.position.set(x,y+h/2,PZ+z);
   world.addBody(body);body.sleep();
   mesh.position.copy(body.position);
-  const b={mesh,body,down:false};blocks.push(b);
-  body.addEventListener('collide',e=>{if(e.body.material===mBall){const v=Math.abs(e.contact.getImpactVelocityAlongNormal());if(v>3)sfx('knock',v)}});
+  const b={mesh,body,kind,down:false,hit:new Set()};blocks.push(b);body.blockRef=b;
+  body.addEventListener('collide',e=>{
+    const v=Math.abs(e.contact.getImpactVelocityAlongNormal()),byBall=e.body.material===mBall;
+    if(byBall&&v>3)sfx(kind==='rubber'?'boing':'knock',v);
+    if(b.down)return;
+    if(kind==='glass'&&(v>(byBall?3:6)))shatterQ.push(b);
+    if(kind==='feather'&&e.body.blockRef&&!b.hit.has(e.body.id)&&body.velocity.length()>8){
+      // a fast feather block hits like a hammer
+      b.hit.add(e.body.id);boostQ.push([b,e.body.blockRef]);
+    }
+  });
   return b;
 }
-const RISK={[PAL.crimson]:'FIRE',[PAL.blue]:'FLOOD',[PAL.purple]:'THEFT',[PAL.green]:'STORM',[PAL.ivory]:'CRASH',[PAL.gold]:'LAWSUIT'};
-const riskCache={};
-function riskMat(color){
-  if(riskCache[color])return riskCache[color];
-  const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');
-  g.fillStyle='#'+color.toString(16).padStart(6,'0');g.fillRect(0,0,256,256);
-  g.strokeStyle='rgba(0,0,0,.18)';g.lineWidth=14;g.strokeRect(14,14,228,228);
-  const word=RISK[color]||'';const light=color===PAL.ivory||color===PAL.gold;
-  g.fillStyle=light?'#3b1f6b':'#fff';g.textAlign='center';g.textBaseline='middle';
-  g.font=`900 ${word.length>5?44:58}px "Arial Black","Lilita One",sans-serif`;g.fillText(word,128,134);
-  const t=new THREE.CanvasTexture(c);t.anisotropy=4;
-  return riskCache[color]=mat(0xffffff,{map:t,...(color===PAL.gold?{emissive:0x3a2600}:{})});
+const shatterQ=[],boostQ=[];
+const shards=[],shardGeo=new THREE.TetrahedronGeometry(.16);
+function shatter(b){
+  if(b.down)return;
+  const p=b.body.position,v=b.body.velocity;
+  world.removeBody(b.body);b.removed=true;scene.remove(b.mesh);
+  for(let i=0;i<12;i++){
+    const m=new THREE.Mesh(shardGeo,kindMats.glass);m.position.set(p.x+(Math.random()-.5)*.8,p.y+(Math.random()-.5)*.8,p.z+(Math.random()-.5)*.8);scene.add(m);
+    shards.push({m,v:new THREE.Vector3(v.x*.4+(Math.random()-.5)*7,v.y*.4+Math.random()*6,v.z*.4+(Math.random()-.5)*7),r:new THREE.Vector3(Math.random()*9,Math.random()*9,0),life:1.4});
+  }
+  sfx('glass');onFallen(b,15);
+}
+function boost([f,o]){
+  if(o.removed)return;
+  const d=new CANNON.Vec3();o.body.position.vsub(f.body.position,d);d.normalize();
+  o.body.wakeUp();o.body.velocity.x+=d.x*7;o.body.velocity.y+=Math.max(2,d.y*7);o.body.velocity.z+=d.z*7;
+  if(o.kind==='glass')shatterQ.push(o);
+  sfx('whoosh');
 }
 function crownDeco(w,h){
   const g=new THREE.Group(),gm=matCache[PAL.gold];
@@ -311,7 +411,7 @@ function crownDeco(w,h){
 }
 // structure helpers: x/z relative to the platform centre, y = bottom
 let ci=0;const nextCol=()=>COLS[(ci++)%COLS.length];
-const cube=(x,y,z,c)=>addBlock(1,1,1,x,y,z,c??nextCol());
+const cube=(x,y,z,c)=>addBlock(1,1,1,x,y,z,c??nextCol(),{kind:c===PAL.gold?'wood':pickKind()});
 const crown=(x,y,z)=>addBlock(1,1,1,x,y,z,PAL.gold,{crown:1,heavy:1});
 function tower(x,z,n,top=false){const c=nextCol(),c2=nextCol();for(let i=0;i<n;i++)cube(x,i,z,i%2?c2:c);if(top)crown(x,n,z);return n}
 function pyramid(x,z,base,top=false){let y=0;for(let r=base;r>0;r--,y++){const c=nextCol();for(let i=0;i<r;i++)cube(x-(r-1)/2+i,y,z,c)}if(top)crown(x,y,z)}
@@ -364,23 +464,29 @@ function levelDef(n){return n<=LEVELS.length?LEVELS[n-1]:generated(n)}
 // ------------------------------------------------------------------ game state
 const save=(()=>{try{return JSON.parse(localStorage.getItem('policyProtector')||'{}')}catch(e){return{}}})();
 let level=save.level||1;
+save.best=save.best||{};save.stats=save.stats||{};save.records=save.records||[];save.nick=save.nick||'';
 const G_={state:'menu',ballsLeft:0,ballsMax:0,total:0,score:0,outT:0,winT:0,cool:0};
-function persist(){try{localStorage.setItem('policyProtector',JSON.stringify({level,stars:save.stars||{},prize:save.prize||null}))}catch(e){}}
+function persist(){try{localStorage.setItem('policyProtector',JSON.stringify({level,stars:save.stars||{},prize:save.prize||null,best:save.best,stats:save.stats,records:save.records,nick:save.nick,seen:save.seen||{}}))}catch(e){}}
 
 function clearLevel(){
-  for(const b of blocks){scene.remove(b.mesh);world.removeBody(b.body)}
+  for(const b of blocks){scene.remove(b.mesh);if(!b.removed)world.removeBody(b.body)}
+  for(const s of shards)scene.remove(s.m);shards.length=0;shatterQ.length=0;boostQ.length=0;
   for(const b of balls){scene.remove(b.mesh);world.removeBody(b.body)}
   blocks=[];balls=[];
 }
 function loadLevel(n){
-  clearLevel();ci=n*3;
+  clearLevel();ci=n*3;mix=mixFor(n);mixRng=rngFor(n*31+7);
   const d=levelDef(n);d.build();
   G_.total=blocks.length;
   G_.ballsMax=d.balls||Math.min(9,Math.max(6,Math.ceil(G_.total/5)+2));
   G_.ballsLeft=G_.ballsMax;G_.score=0;G_.outT=0;G_.winT=0;G_.cool=0;G_.state='play';
   $('lvl').innerHTML='<small>Level</small>'+n;
   renderBalls();renderProg();
+  const fresh=Object.keys(mix).find(k=>!(save.seen||{})[k]);
+  if(fresh){save.seen=save.seen||{};save.seen[fresh]=1;toast(fresh,INTRO[fresh])}
 }
+let toastT=0;
+function toast(kind,text){const t=$('toast');t.innerHTML=`<span class="sw ${kind}"></span>New: ${esc(text)}`;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3600)}
 function renderBalls(){
   const dots=$('ballDots');dots.innerHTML='';
   for(let i=0;i<G_.ballsMax;i++){const d=document.createElement('div');d.className='dot'+(i>=G_.ballsLeft?' used':'');dots.appendChild(d)}
@@ -389,7 +495,7 @@ function renderBalls(){
 function renderProg(){
   const cleared=blocks.filter(b=>b.down).length;
   $('progFill').style.width=(G_.total?cleared/G_.total*100:0)+'%';
-  $('progTxt').textContent=`${cleared} / ${G_.total} risks`;
+  $('progTxt').textContent=`${cleared} / ${G_.total} blocks`;
 }
 
 // ------------------------------------------------------------------ aiming + firing
@@ -481,6 +587,14 @@ function sfx(k,v=0){
       g.gain.setValueAtTime(a,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+.18);
     }else if(k==='win'){
       [523,659,784,1047].forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*.11);g.gain.linearRampToValueAtTime(.08,t+i*.11+.01);g.gain.exponentialRampToValueAtTime(.001,t+i*.11+.3);o.connect(g).connect(AC.destination);o.start(t+i*.11);o.stop(t+i*.11+.32)});
+    }else if(k==='glass'){
+      for(let i=0;i<5;i++){const o=AC.createOscillator(),g=AC.createGain(),st=t+i*.025;o.type='triangle';o.frequency.value=2200+Math.random()*2600;g.gain.setValueAtTime(.06,st);g.gain.exponentialRampToValueAtTime(.001,st+.18);o.connect(g).connect(AC.destination);o.start(st);o.stop(st+.2)}
+      const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=noiseBuf;f.type='highpass';f.frequency.value=3500;g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);s.connect(f).connect(g).connect(AC.destination);s.start(t);s.stop(t+.3);
+    }else if(k==='boing'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(520,t+.12);o.frequency.exponentialRampToValueAtTime(220,t+.25);g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+.32);
+    }else if(k==='whoosh'){
+      if(t-lastKnock<.04)return;lastKnock=t;
+      const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=noiseBuf;f.type='bandpass';f.Q.value=1;f.frequency.setValueAtTime(600,t);f.frequency.exponentialRampToValueAtTime(2400,t+.15);g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);s.connect(f).connect(g).connect(AC.destination);s.start(t);s.stop(t+.2);
     }else if(k==='drop'){
       const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.setValueAtTime(700,t);o.frequency.exponentialRampToValueAtTime(1100,t+.08);g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.001,t+.12);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+.14);
     }
@@ -488,15 +602,19 @@ function sfx(k,v=0){
 }
 
 // ------------------------------------------------------------------ loop
-function onFallen(b){
-  b.down=true;G_.score+=10;renderProg();sfx('drop');
-  popup(b.mesh.position,'+10');
+function onFallen(b,pts=10){
+  b.down=true;G_.score+=pts;renderProg();if(pts===10)sfx('drop');
+  popup(b.mesh.position,'+'+pts);
 }
 function update(dt){
   world.step(1/60,dt,4);
+  while(boostQ.length)boost(boostQ.shift());
+  while(shatterQ.length)shatter(shatterQ.shift());
+  for(let i=shards.length-1;i>=0;i--){const s=shards[i];s.life-=dt;s.v.y-=G*dt;s.m.position.addScaledVector(s.v,dt);s.m.rotation.x+=s.r.x*dt;s.m.rotation.y+=s.r.y*dt;if(s.life<=0){scene.remove(s.m);shards.splice(i,1)}}
+  if(G_.state==='play')stat('sec',dt);
   for(const b of blocks){
     b.mesh.position.copy(b.body.position);b.mesh.quaternion.copy(b.body.quaternion);
-    if(!b.down){const p=b.body.position;if(p.y<-.9||Math.abs(p.x)>PW/2+.15||Math.abs(p.z-PZ)>PD/2+.15)onFallen(b)}
+    if(!b.down&&!b.removed){const p=b.body.position;if(p.y<-.9||Math.abs(p.x)>PW/2+.15||Math.abs(p.z-PZ)>PD/2+.15)onFallen(b)}
   }
   for(const b of balls){b.mesh.position.copy(b.body.position);b.mesh.quaternion.copy(b.body.quaternion);b.age+=dt}
   for(const b of balls)if(b.body.position.y<-40||b.age>9){scene.remove(b.mesh);world.removeBody(b.body);b.gone=true}
@@ -535,7 +653,7 @@ function showQuiz(n){
   const q=QUIZ[(n-1)%QUIZ.length],box=$('qOpts');
   $('qText').textContent=q.q;$('qAns').hidden=true;box.innerHTML='';
   q.a.forEach((txt,i)=>{const b=document.createElement('button');b.type='button';b.className='opt';b.textContent=txt;
-    b.onclick=()=>{box.querySelectorAll('button').forEach((x,j)=>{x.disabled=true;if(j===q.c)x.classList.add('right');else if(j===i)x.classList.add('wrong')});
+    b.onclick=()=>{stat('quizTotal');if(i===q.c)stat('quizRight');persist();box.querySelectorAll('button').forEach((x,j)=>{x.disabled=true;if(j===q.c)x.classList.add('right');else if(j===i)x.classList.add('wrong')});
       $('qAns').textContent=(i===q.c?'Correct! ':'Not quite. ')+q.e;$('qAns').hidden=false};
     box.appendChild(b)});
 }
@@ -558,11 +676,48 @@ function showPrize(){
   $('prizeCode').textContent=save.prize;$('prizeFine').textContent=prizeFine();
   $('winO').hidden=true;$('prizeO').hidden=false;$('prizeNext').focus();
 }
+// computer rivals: clearly labelled practice opponents whose totals keep pace with how far you've got
+const RIVALS=[['Captain Coverage',1.30],['Deductible Dan',1.18],['Premium Pat',1.08],['Rider Rosa',.99],['Claims Carla',.91],
+  ['Umbrella Ike',.84],['Policy Pete',.77],['Beneficiary Bea',.70],['Liability Lou',.62]];
+const par=k=>170+28*k;
+function myTotal(){return Object.values(save.best).reduce((a,b)=>a+b,0)}
+function standings(){
+  const reached=Math.max(1,Object.keys(save.best).length);
+  const rows=RIVALS.map(([n,sk],i)=>{let t=0;for(let k=1;k<=reached;k++)t+=par(k)*sk*(.94+.12*rngFor(i*101+k)());return{n,t:Math.round(t),cpu:true}});
+  rows.push({n:save.nick||'You',t:myTotal(),me:true});
+  rows.sort((a,b)=>b.t-a.t);
+  return rows;
+}
+function myRank(){return standings().findIndex(r=>r.me)+1}
+function leagueRows(rows,from,to){
+  return rows.slice(from,to).map((r,i)=>`<tr class="${r.me?'me':''}"><td class="n">${from+i+1}</td><td>${esc(r.n)}${r.cpu?'<span class="cpu">CPU</span>':''}</td><td class="s">${r.t.toLocaleString()}</td></tr>`).join('');
+}
+function renderFullLeague(){$('fullLeague').innerHTML=leagueRows(standings(),0,10)}
+// per-player behaviour, kept on this device for the agent view
+function stat(k,v=1){save.stats[k]=(save.stats[k]||0)+v}
+function compScore(st,lv){return Math.min(100,Math.round((st.retries||0)*4+(st.replays||0)*12+(st.views||0)*6+Math.max(0,lv-6)*3))}
+function compLabel(n){return n>=60?['Competitive','lvl-c']:n>=25?['Engaged','lvl-e']:['Casual','lvl-k']}
+function playerRecord(){
+  const lv=level,st=save.stats,stars=Object.values(save.stars||{}).reduce((a,b)=>a+b,0),sc=compScore(st,lv);
+  return{nick:save.nick||'(no nickname)',levels:lv-1,stars,retries:st.retries||0,replays:st.replays||0,views:st.views||0,
+    quiz:`${st.quizRight||0}/${st.quizTotal||0}`,min:Math.round((st.sec||0)/6)/10,rank:Object.keys(save.best).length?myRank():'–',score:sc,when:new Date().toLocaleString()};
+}
+function renderAgent2(){
+  const recs=[...save.records.map(r=>({...r})),{...playerRecord(),current:true}];
+  const head='<tr><th>Player</th><th>Lvls</th><th>★</th><th>Retry</th><th>Replay</th><th>Ranks</th><th>Quiz</th><th>Min</th><th>Rank</th><th>Score</th></tr>';
+  $('agentTbl').innerHTML=head+recs.map(r=>{const [lab,cls]=compLabel(r.score);return`<tr><td>${esc(r.nick)}${r.current?' <span class="cpu">NOW</span>':''}</td><td>${r.levels}</td><td>${r.stars}</td><td>${r.retries}</td><td>${r.replays}</td><td>${r.views}</td><td>${r.quiz}</td><td>${r.min}</td><td>${r.rank}</td><td class="${cls}">${r.score} ${lab}</td></tr>`}).join('');
+}
 function win(){
   G_.state='won';sfx('win');
   const stars=G_.ballsLeft>=2?3:G_.ballsLeft===1?2:1;
   G_.score+=G_.ballsLeft*50;
   save.stars=save.stars||{};save.stars[level]=Math.max(save.stars[level]||0,stars);
+  const before=Object.keys(save.best).length?myRank():RIVALS.length+1;
+  save.best[level]=Math.max(save.best[level]||0,G_.score);
+  const rows=standings(),after=rows.findIndex(r=>r.me)+1,diff=before-after;
+  $('wRank').innerHTML=`Rank #${after} of ${rows.length} `+(diff>0?`<span class="up">▲${diff}</span>`:diff<0?`<span class="dn">▼${-diff}</span>`:'');
+  const from=Math.max(0,Math.min(rows.length-5,after-3));
+  $('wLeague').innerHTML=leagueRows(rows,from,from+5);
   maybePrize();
   const finished=level;level=Math.max(level,finished+1);persist();level=finished;
   showQuiz(finished);
@@ -572,7 +727,7 @@ function win(){
 }
 function lose(left){
   G_.state='lost';
-  $('loseTxt').textContent=left===1?'1 risk is still standing.':`${left} risks are still standing.`;
+  $('loseTxt').textContent=left===1?'1 block is still standing.':`${left} blocks are still standing.`;
   $('loseO').hidden=false;$('retryBtn').focus();
 }
 function resize(){
@@ -594,26 +749,44 @@ function frame(now){
 }
 
 // ------------------------------------------------------------------ UI
-function play(n){level=n;['startO','winO','loseO','prizeO'].forEach(id=>$(id).hidden=true);loadLevel(n);cv.focus?.()}
+function play(n){level=n;['startO','winO','loseO','prizeO','leagueO'].forEach(id=>$(id).hidden=true);loadLevel(n);cv.focus?.()}
 $('playBtn').onclick=()=>{initAudio();play(level)};
 $('nextBtn').onclick=()=>{if(prizePending){prizePending=false;showPrize()}else play(level+1)};
 $('prizeNext').onclick=()=>play(level+1);
-$('replayBtn').onclick=()=>play(level);
-$('retryBtn').onclick=()=>play(level);
-$('iconBtn').onclick=()=>{if(G_.state==='play'||G_.state==='lost')play(level)};
-$('resetBtn').onclick=()=>{level=1;save.stars={};persist();updateStart()};
+$('replayBtn').onclick=()=>{if((save.stars[level]||0)<3)stat('replays');persist();play(level)};
+$('retryBtn').onclick=()=>{stat('retries');persist();play(level)};
+$('iconBtn').onclick=()=>{if(G_.state==='play'||G_.state==='lost'){stat('retries');persist();play(level)}};
+$('leagueBtn').onclick=()=>{stat('views');persist();$('nick').value=save.nick;renderFullLeague();$('startO').hidden=true;$('leagueO').hidden=false;$('leagueClose').focus()};
+$('nick').addEventListener('input',e=>{save.nick=e.target.value.trim().slice(0,16);persist();renderFullLeague()});
+$('leagueClose').onclick=()=>{$('leagueO').hidden=true;updateStart();$('startO').hidden=false};
+// agent view: open the game's link with #agent on the end
+function openAgent(){if(location.hash!=='#agent')return;renderAgent2();$('agentO').hidden=false}
+addEventListener('hashchange',openAgent);
+$('agentClose').onclick=()=>{$('agentO').hidden=true;try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}};
+let armed=null;
+function twoStep(btn,label,fn){if(armed===btn){armed=null;btn.textContent=label;fn()}else{armed=btn;btn.dataset.l=label;btn.textContent='Tap again to confirm'}}
+$('nextPlayerBtn').onclick=e=>twoStep(e.currentTarget,'Save player, start fresh',()=>{
+  save.records.push(playerRecord());
+  level=1;save.stars={};save.best={};save.stats={};save.prize=null;save.nick='';save.seen={};persist();
+  clearLevel();G_.state='menu';['winO','loseO','prizeO','leagueO'].forEach(id=>$(id).hidden=true);$('startO').hidden=false;
+  ci=3;mix=mixFor(1);mixRng=rngFor(38);levelDef(1).build();G_.total=blocks.length;G_.ballsMax=G_.ballsLeft=LEVELS[0].balls;renderProg();renderBalls();
+  $('lvl').innerHTML='<small>Level</small>1';updateStart();renderAgent2();
+});
+$('clearRecBtn').onclick=e=>twoStep(e.currentTarget,'Clear records',()=>{save.records=[];persist();renderAgent2()});
+$('resetBtn').onclick=()=>{level=1;save.stars={};save.best={};persist();updateStart()};
 function updateStart(){
   $('playBtn').textContent=`Play level ${level}`;
   $('resetBtn').hidden=level<=1;
   const ph=$('prizeHave');ph.hidden=!save.prize;if(save.prize)ph.textContent=`Your prize code: ${save.prize}. Show it ${PRIZE.where}.`;
   const total=Object.values(save.stars||{}).reduce((a,b)=>a+b,0);
-  $('startSub').textContent=total?`You've earned ${total} ★ so far.`:'Fewer balls used, more stars earned.';
+  $('startSub').textContent=total?`You've earned ${total} ★ so far · rank #${myRank()} of ${RIVALS.length+1}.`:'Fewer balls used, more stars earned.';
 }
 updateStart();
 // a level stands on the platform behind the start card
-ci=level*3;{const d=levelDef(level);d.build();G_.total=blocks.length;G_.ballsMax=G_.ballsLeft=d.balls||Math.min(9,Math.max(6,Math.ceil(G_.total/5)+2))}renderProg();renderBalls();
+ci=level*3;mix=mixFor(level);mixRng=rngFor(level*31+7);{const d=levelDef(level);d.build();G_.total=blocks.length;G_.ballsMax=G_.ballsLeft=d.balls||Math.min(9,Math.max(6,Math.ceil(G_.total/5)+2))}renderProg();renderBalls();
 $('lvl').innerHTML='<small>Level</small>'+level;
+openAgent();
 requestAnimationFrame(frame);
-window.__cc={showPrize,get G(){return G_},get blocks(){return blocks},fireAt:(x,y,z)=>fireAt(new THREE.Vector3(x,y,z)),play,update};
+window.__cc={showPrize,get save(){return save},get G(){return G_},get blocks(){return blocks},fireAt:(x,y,z)=>fireAt(new THREE.Vector3(x,y,z)),play,update};
 })();
 </script>
