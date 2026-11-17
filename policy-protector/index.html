@@ -1,0 +1,619 @@
+<title>Policy Protector</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: full-bleed 3D scene; a thin HUD rides the top and bottom edges; cards float centre-screen.
+   Single deliberate look: bright daytime sky, deep purple and gold. Agent details live in AGENT below. */
+:root{
+  --purple:#3b1f6b;
+  --purple-2:#5a3399;
+  --gold:#f2b632;
+  --gold-deep:#b97d0a;
+  --ivory:#fff6e2;
+  --crimson:#c8323c;
+  --sky:#8fd0ff;
+  --display:'Lilita One','Arial Rounded MT Bold','Trebuchet MS',sans-serif;
+  --body:'Nunito','Trebuchet MS','Segoe UI',sans-serif;
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--sky);color:var(--ivory);font-family:var(--body);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.hud{position:fixed;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none;z-index:2;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#top{top:0;padding-top:max(12px,env(safe-area-inset-top,0px))}
+#bottom{bottom:0;padding-bottom:max(14px,env(safe-area-inset-bottom,0px));justify-content:center}
+.pill{background:var(--purple);border:3px solid var(--gold);border-radius:999px;padding:4px 14px;font-family:var(--display);
+  font-size:clamp(16px,4.2vw,22px);letter-spacing:.02em;box-shadow:0 4px 0 rgba(30,12,60,.35);white-space:nowrap}
+.pill small{font-family:var(--body);font-weight:800;font-size:.62em;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-right:6px}
+#prog{flex:1;max-width:360px;height:18px;background:rgba(59,31,107,.85);border:3px solid var(--gold);border-radius:999px;overflow:hidden;
+  box-shadow:0 4px 0 rgba(30,12,60,.35);position:relative}
+#progFill{height:100%;width:0;background:linear-gradient(180deg,#ffd76a,var(--gold) 60%,var(--gold-deep));transition:width .25s}
+#progTxt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--ivory);
+  text-shadow:0 1px 2px rgba(0,0,0,.6);font-variant-numeric:tabular-nums}
+#balls{display:flex;align-items:center;gap:10px;background:var(--purple);border:3px solid var(--gold);border-radius:999px;padding:6px 16px;
+  box-shadow:0 4px 0 rgba(30,12,60,.35)}
+#ballDots{display:flex;gap:5px;flex-wrap:wrap;max-width:60vw}
+.dot{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8a8a95,#2a2a33 70%);box-shadow:inset 0 -2px 0 rgba(0,0,0,.4)}
+.dot.used{opacity:.25}
+#ballNum{font-family:var(--display);font-size:24px;color:var(--gold);font-variant-numeric:tabular-nums}
+#iconBtn{pointer-events:auto;font:inherit;font-family:var(--display);font-size:18px;background:var(--purple);color:var(--ivory);border:3px solid var(--gold);
+  border-radius:999px;padding:4px 12px;cursor:pointer;box-shadow:0 4px 0 rgba(30,12,60,.35)}
+.pop{position:fixed;z-index:3;pointer-events:none;font-family:var(--display);font-size:26px;color:var(--gold);
+  text-shadow:0 2px 0 var(--purple),0 0 6px rgba(59,31,107,.6);transform:translate(-50%,-50%);animation:pop 900ms ease-out forwards}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
+
+.overlay{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(30,12,60,.38);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-bottom,0px));box-sizing:border-box}
+.card{background:linear-gradient(180deg,var(--purple-2),var(--purple));border:4px solid var(--gold);border-radius:22px;
+  box-shadow:0 10px 0 rgba(30,12,60,.45),0 24px 50px rgba(0,0,0,.3);width:100%;max-width:420px;max-height:100%;overflow:auto;box-sizing:border-box;
+  padding:22px 22px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.card h1,.card h2{font-family:var(--display);font-weight:400;margin:0;line-height:1;color:var(--gold);text-shadow:0 3px 0 #1e0c3c;text-wrap:balance}
+.card h1{font-size:clamp(44px,12vw,62px)}
+.card h2{font-size:clamp(34px,9vw,46px)}
+.card p{margin:0;font-weight:600;line-height:1.35;max-width:34ch;color:var(--ivory)}
+.card .sub{font-size:14px;color:#d9c9f5}
+.crown{width:84px;height:60px}
+.stars{display:flex;gap:6px;font-size:52px;line-height:1}
+.stars span{color:rgba(255,255,255,.18);text-shadow:0 3px 0 #1e0c3c}
+.stars span.on{color:var(--gold);animation:star .45s cubic-bezier(.3,1.6,.5,1) backwards}
+.stars span.on:nth-child(2){animation-delay:.15s}.stars span.on:nth-child(3){animation-delay:.3s}
+@keyframes star{from{transform:scale(0) rotate(-40deg)}to{transform:scale(1)}}
+.row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.btn{font:inherit;font-family:var(--display);font-size:24px;letter-spacing:.02em;cursor:pointer;border-radius:16px;padding:8px 26px;
+  background:linear-gradient(180deg,#ffd76a,var(--gold) 55%,var(--gold-deep));color:var(--purple);border:3px solid #fff3c4;
+  box-shadow:0 5px 0 #7a4f05;transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #7a4f05}
+.btn.alt{background:transparent;color:var(--ivory);border-color:rgba(255,246,226,.6);box-shadow:none;font-size:20px}
+button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.stat{display:flex;gap:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat b{display:block;font-family:var(--display);font-weight:400;font-size:26px;color:var(--gold)}
+.stat span{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#d9c9f5}
+#err{position:fixed;inset:auto 16px 16px;z-index:9;background:var(--crimson);color:#fff;padding:10px 14px;border-radius:12px;font-weight:700}
+.agent{width:100%;border-top:2px dashed rgba(242,182,50,.45);padding-top:12px;display:flex;flex-direction:column;gap:2px;font-size:14px;color:#e9ddff}
+.agent b{font-family:var(--display);font-weight:400;font-size:20px;color:var(--ivory)}
+.agent .lic{font-size:12px;color:#c9b6ef;letter-spacing:.02em}
+.agent .ph{-webkit-user-select:text;user-select:text;font-weight:800;color:var(--ivory)}
+.agent a{color:var(--gold);font-weight:800}
+.quiz{width:100%;background:rgba(0,0,0,.18);border-radius:14px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;align-items:center}
+.quiz .tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:800}
+.quiz .q{font-weight:800;font-size:16px}
+.quiz .opt{font:inherit;font-weight:800;font-size:15px;cursor:pointer;background:var(--ivory);color:var(--purple);border:2px solid #fff3c4;border-radius:12px;padding:6px 14px}
+.quiz .opt.right{background:#2e9d6b;color:#fff}.quiz .opt.wrong{background:var(--crimson);color:#fff}
+.quiz .qa{font-size:14px;font-weight:600}
+.fine{font-size:11.5px;line-height:1.35;color:#c9b6ef;max-width:40ch;margin:0}
+.code{font-family:var(--display);font-size:34px;letter-spacing:.12em;color:var(--purple);background:var(--ivory);border:3px dashed var(--gold);border-radius:12px;padding:4px 16px;-webkit-user-select:text;user-select:text}
+@media (prefers-reduced-motion:reduce){.pop,.stars span.on{animation:none}}
+</style>
+
+<canvas id="cv" aria-label="Crown Cannon game view. Tap or click where you want to fire."></canvas>
+
+<div class="hud" id="top">
+  <div class="pill" id="lvl"><small>Level</small>1</div>
+  <div id="prog" aria-label="Risks cleared"><div id="progFill"></div><div id="progTxt">0 / 0 risks</div></div>
+  <button type="button" id="iconBtn" aria-label="Restart level">↻</button>
+</div>
+<div class="hud" id="bottom">
+  <div id="balls" aria-label="Cannonballs left"><div id="ballDots"></div><div id="ballNum">0</div></div>
+</div>
+
+<div id="startO" class="overlay">
+  <div class="card" role="dialog" aria-labelledby="t1">
+    <svg class="crown" viewBox="0 0 84 60" aria-hidden="true"><path d="M42 4 L72 14 C72 36 60 50 42 57 C24 50 12 36 12 14 Z" fill="#f2b632" stroke="#1e0c3c" stroke-width="3" stroke-linejoin="round"/><path d="M30 30 L39 39 L56 21" fill="none" stroke="#3b1f6b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h1 id="t1">Policy Protector</h1>
+    <p>Fire, floods, theft, crashes: life throws risks at your family. Tap where you want the cannonball to go and knock <b>every risk</b> off the platform before you run out.</p>
+    <p class="sub" id="startSub">Fewer balls used, more stars earned.</p>
+    <div class="row">
+      <button type="button" class="btn" id="playBtn">Play level 1</button>
+      <button type="button" class="btn alt" id="resetBtn" hidden>Start over</button>
+    </div>
+    <p class="sub" id="prizeHave" hidden></p>
+    <div class="agent"></div>
+  </div>
+</div>
+
+<div id="winO" class="overlay" hidden>
+  <div class="card" role="dialog" aria-labelledby="t2">
+    <h2 id="t2">Risks cleared!</h2>
+    <div class="stars" id="stars" aria-label="Stars"><span>★</span><span>★</span><span>★</span></div>
+    <div class="stat"><div><b id="wBalls">0</b><span>Balls left</span></div><div><b id="wScore">0</b><span>Score</span></div></div>
+    <div class="quiz" id="quiz">
+      <span class="tag">Quick insurance question</span>
+      <p class="q" id="qText"></p>
+      <div class="row" id="qOpts"></div>
+      <p class="qa" id="qAns" hidden></p>
+    </div>
+    <div class="row"><button type="button" class="btn" id="nextBtn">Next level</button><button type="button" class="btn alt" id="replayBtn">Replay</button></div>
+    <p class="fine">Quiz answers are general information, not advice about any specific policy. Coverage varies by policy and state.</p>
+  </div>
+</div>
+
+<div id="prizeO" class="overlay" hidden>
+  <div class="card" role="dialog" aria-labelledby="t4">
+    <h2 id="t4">You earned a prize!</h2>
+    <p id="prizeTxt"></p>
+    <div class="code" id="prizeCode">PP-00000</div>
+    <p class="fine" id="prizeFine"></p>
+    <div class="row"><button type="button" class="btn" id="prizeNext">Keep playing</button></div>
+    <div class="agent"></div>
+  </div>
+</div>
+
+<div id="loseO" class="overlay" hidden>
+  <div class="card" role="dialog" aria-labelledby="t3">
+    <h2 id="t3">Out of cannonballs</h2>
+    <p id="loseTxt">3 risks are still standing.</p>
+    <div class="row"><button type="button" class="btn" id="retryBtn">Try again</button></div>
+  </div>
+</div>
+<div id="err" hidden>The 3D engine couldn't load. Check your connection and reload the page.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script>
+(()=>{
+'use strict';
+if(!window.THREE||!window.CANNON){document.getElementById('err').hidden=false;return}
+const $=id=>document.getElementById(id);
+
+// ================================================================== YOUR DETAILS
+// Fill these in once you're licensed and your agency's compliance team has approved the game.
+const AGENT={
+  name:'[Your Name]',
+  title:'Licensed Insurance Agent',
+  license:'[State] License #[0000000]',
+  agency:'[Agency name]',
+  phone:'[(555) 555-0100]',
+  bookingUrl:'',                  // e.g. your scheduling link; leave '' to hide the button
+  bookingText:'Book a free coverage review',
+};
+// Keep the prize under your state's promotional-gift limit and your agency's rules.
+// It is the same for everyone, and never tied to a quote, meeting or purchase.
+const PRIZE={
+  enabled:true,
+  afterLevel:5,                   // clear this level to earn it
+  item:'[a free branded stress ball]',
+  where:'[at our booth]',
+  value:'[under $10]',
+};
+// ==================================================================
+
+// ------------------------------------------------------------------ constants
+const PZ=-13;                     // platform centre (z); its top surface is y=0
+const PW=8,PD=4;                 // platform width / depth
+const G=20;                       // gravity
+const BALL_R=.45;
+const PAL={purple:0x6b3fa0,crimson:0xc8323c,blue:0x2f6fb5,ivory:0xefe2c4,green:0x2e9d6b,gold:0xf2b632};
+const COLS=[PAL.purple,PAL.crimson,PAL.blue,PAL.ivory,PAL.green];
+
+// ------------------------------------------------------------------ renderer + scene
+const cv=$('cv');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+{
+  const c=document.createElement('canvas');c.width=2;c.height=256;const g=c.getContext('2d');
+  const gr=g.createLinearGradient(0,0,0,256);gr.addColorStop(0,'#4fa3f0');gr.addColorStop(.55,'#9fd6ff');gr.addColorStop(1,'#fff0d2');
+  g.fillStyle=gr;g.fillRect(0,0,2,256);
+  scene.background=new THREE.CanvasTexture(c);
+}
+scene.fog=new THREE.Fog(0xcfe9ff,40,120);
+const camera=new THREE.PerspectiveCamera(55,1,.1,300);
+const CAM_POS=new THREE.Vector3(0,5.6,4.2),CAM_LOOK=new THREE.Vector3(0,1.2,PZ);
+camera.position.copy(CAM_POS);camera.lookAt(CAM_LOOK);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x9a8466,.8));
+const sun=new THREE.DirectionalLight(0xfff3dc,1.05);
+sun.position.set(9,22,PZ+10);sun.target.position.set(0,0,PZ);
+sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+Object.assign(sun.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:1,far:60});
+sun.shadow.bias=-.0015;
+scene.add(sun,sun.target);
+
+const mat=(color,o={})=>new THREE.MeshStandardMaterial({color,roughness:.62,metalness:0,...o});
+// floating rock pillar with a stone platform on top
+{
+  const stone=mat(0x9a93b3),rock=mat(0x8c7a64,{flatShading:true}),grass=mat(0x5fbf5a);
+  const top=new THREE.Mesh(new THREE.BoxGeometry(PW,1,PD),stone);top.position.set(0,-.5,PZ);top.receiveShadow=true;scene.add(top);
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(PW+.3,.22,PD+.3),mat(PAL.gold,{metalness:.1,roughness:.4}));trim.position.set(0,-.95,PZ);scene.add(trim);
+  const pillar=new THREE.Mesh(new THREE.CylinderGeometry(3.6,1.2,22,9,4),rock);pillar.position.set(0,-12.2,PZ);scene.add(pillar);
+  // banners hanging off the front edge
+  for(const x of [-3.2,3.2]){
+    const b=new THREE.Mesh(new THREE.PlaneGeometry(1.1,2.2),mat(PAL.purple,{side:THREE.DoubleSide}));b.position.set(x,-2.1,PZ+PD/2+.17);scene.add(b);
+    const s=new THREE.Mesh(new THREE.CircleGeometry(.32,5),mat(PAL.gold));s.position.set(x,-1.9,PZ+PD/2+.18);scene.add(s);
+  }
+  // distant hills and islands so the drop has somewhere to go
+  const hill=mat(0x7cc37a,{flatShading:true}),far=mat(0x9fcfa0,{flatShading:true});
+  const isl=(x,y,z,r,h,m)=>{const i=new THREE.Mesh(new THREE.ConeGeometry(r,h,7),m);i.position.set(x,y,z);i.rotation.x=Math.PI;scene.add(i);
+    const g=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.98,.6,7),grass);g.position.set(x,y+h/2+.3,z);scene.add(g)};
+  isl(-22,-6,-48,6,8,hill);isl(26,-9,-60,8,10,hill);isl(-8,-16,-80,10,9,far);isl(40,-4,-30,4,6,hill);isl(-36,-10,-28,5,7,hill);
+  const cloudM=mat(0xffffff,{roughness:1});
+  const cloud=(x,y,z,s)=>{const g=new THREE.Group();for(let i=0;i<4;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),cloudM);m.position.set(i*1.1-1.6,Math.sin(i)*.3,0);m.scale.setScalar(1-.15*Math.abs(i-1.5));g.add(m)}g.position.set(x,y,z);g.scale.set(s,s*.6,s);scene.add(g);return g};
+  window.__clouds=[cloud(-14,-8,-30,2.2),cloud(12,-11,-24,1.8),cloud(-30,6,-70,3),cloud(25,9,-80,3.5),cloud(5,-14,-45,2.6)];
+}
+
+// the cannon
+const cannon=new THREE.Group();scene.add(cannon);
+const pivot=new THREE.Group();pivot.rotation.order='YXZ';
+{
+  const iron=mat(0x2f2f38,{metalness:.55,roughness:.35}),gold=mat(PAL.gold,{metalness:.15,roughness:.35}),wood=mat(0x7a4a26);
+  cannon.position.set(0,1.1,-.6);cannon.scale.setScalar(.62);
+  const base=new THREE.Mesh(new THREE.BoxGeometry(1.5,.45,1.6),wood);base.position.y=.05;cannon.add(base);
+  for(const x of [-.82,.82]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.18,16),wood);w.rotation.z=Math.PI/2;w.position.set(x,-.05,.1);cannon.add(w);
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.22,10),gold);hub.rotation.z=Math.PI/2;hub.position.set(x,-.05,.1);cannon.add(hub)}
+  pivot.position.set(0,.55,0);cannon.add(pivot);
+  const bg=new THREE.CylinderGeometry(.3,.42,2.2,18);bg.rotateX(-Math.PI/2);bg.translate(0,0,-.8);
+  const barrel=new THREE.Mesh(bg,iron);pivot.add(barrel);
+  for(const z of [-1.82,-.9,.15]){const rg=new THREE.TorusGeometry(z<-1?.33:.42,.07,8,20);const r=new THREE.Mesh(rg,gold);r.position.z=z;pivot.add(r)}
+  const knob=new THREE.Mesh(new THREE.SphereGeometry(.42,14,10),iron);knob.position.z=.3;pivot.add(knob);
+}
+
+// ------------------------------------------------------------------ physics
+const world=new CANNON.World();
+world.gravity.set(0,-G,0);
+world.broadphase=new CANNON.SAPBroadphase(world);
+world.solver.iterations=14;
+world.allowSleep=true;
+const mBlock=new CANNON.Material('block'),mBall=new CANNON.Material('ball'),mStone=new CANNON.Material('stone');
+world.addContactMaterial(new CANNON.ContactMaterial(mBlock,mBlock,{friction:.35,restitution:.05}));
+world.addContactMaterial(new CANNON.ContactMaterial(mBlock,mStone,{friction:.22,restitution:.05}));
+world.addContactMaterial(new CANNON.ContactMaterial(mBall,mBlock,{friction:.3,restitution:.25}));
+world.addContactMaterial(new CANNON.ContactMaterial(mBall,mStone,{friction:.3,restitution:.35}));
+{const b=new CANNON.Body({mass:0,material:mStone});b.addShape(new CANNON.Box(new CANNON.Vec3(PW/2,.5,PD/2)));b.position.set(0,-.5,PZ);world.addBody(b)}
+
+// ------------------------------------------------------------------ blocks
+let blocks=[],balls=[];
+const geoCache={},matCache={};
+const edgeMat=new THREE.LineBasicMaterial({color:0x1e0c3c,transparent:true,opacity:.35});
+function addBlock(w,h,d,x,y,z,color,o={}){
+  const key=w+'x'+h+'x'+d;
+  if(!geoCache[key])geoCache[key]={g:new THREE.BoxGeometry(w,h,d),e:new THREE.EdgesGeometry(new THREE.BoxGeometry(w,h,d))};
+  if(!matCache[color])matCache[color]=mat(color,color===PAL.gold?{metalness:.12,roughness:.35,emissive:0x3a2600}:{});
+  const mesh=new THREE.Mesh(geoCache[key].g,w===1&&h===1&&d===1?riskMat(color):matCache[color]);mesh.castShadow=mesh.receiveShadow=true;
+  mesh.add(new THREE.LineSegments(geoCache[key].e,edgeMat));
+  if(o.crown)mesh.add(crownDeco(w,h));
+  scene.add(mesh);
+  const body=new CANNON.Body({mass:w*h*d*(o.heavy?1.6:.8),material:mBlock,sleepSpeedLimit:.25,sleepTimeLimit:.6,linearDamping:.04,angularDamping:.06});
+  body.addShape(new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2)));
+  body.position.set(x,y+h/2,PZ+z);
+  world.addBody(body);body.sleep();
+  mesh.position.copy(body.position);
+  const b={mesh,body,down:false};blocks.push(b);
+  body.addEventListener('collide',e=>{if(e.body.material===mBall){const v=Math.abs(e.contact.getImpactVelocityAlongNormal());if(v>3)sfx('knock',v)}});
+  return b;
+}
+const RISK={[PAL.crimson]:'FIRE',[PAL.blue]:'FLOOD',[PAL.purple]:'THEFT',[PAL.green]:'STORM',[PAL.ivory]:'CRASH',[PAL.gold]:'LAWSUIT'};
+const riskCache={};
+function riskMat(color){
+  if(riskCache[color])return riskCache[color];
+  const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');
+  g.fillStyle='#'+color.toString(16).padStart(6,'0');g.fillRect(0,0,256,256);
+  g.strokeStyle='rgba(0,0,0,.18)';g.lineWidth=14;g.strokeRect(14,14,228,228);
+  const word=RISK[color]||'';const light=color===PAL.ivory||color===PAL.gold;
+  g.fillStyle=light?'#3b1f6b':'#fff';g.textAlign='center';g.textBaseline='middle';
+  g.font=`900 ${word.length>5?44:58}px "Arial Black","Lilita One",sans-serif`;g.fillText(word,128,134);
+  const t=new THREE.CanvasTexture(c);t.anisotropy=4;
+  return riskCache[color]=mat(0xffffff,{map:t,...(color===PAL.gold?{emissive:0x3a2600}:{})});
+}
+function crownDeco(w,h){
+  const g=new THREE.Group(),gm=matCache[PAL.gold];
+  const ring=new THREE.Mesh(new THREE.CylinderGeometry(w*.36,w*.4,.28,14,1,true),gm);ring.position.y=h/2+.14;g.add(ring);
+  for(let i=0;i<5;i++){const a=i/5*Math.PI*2,c=new THREE.Mesh(new THREE.ConeGeometry(.09,.3,6),gm);c.position.set(Math.cos(a)*w*.34,h/2+.42,Math.sin(a)*w*.34);g.add(c)}
+  const gem=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),mat(PAL.crimson,{roughness:.2}));gem.position.set(0,h/2+.16,w*.4);g.add(gem);
+  return g;
+}
+// structure helpers: x/z relative to the platform centre, y = bottom
+let ci=0;const nextCol=()=>COLS[(ci++)%COLS.length];
+const cube=(x,y,z,c)=>addBlock(1,1,1,x,y,z,c??nextCol());
+const crown=(x,y,z)=>addBlock(1,1,1,x,y,z,PAL.gold,{crown:1,heavy:1});
+function tower(x,z,n,top=false){const c=nextCol(),c2=nextCol();for(let i=0;i<n;i++)cube(x,i,z,i%2?c2:c);if(top)crown(x,n,z);return n}
+function pyramid(x,z,base,top=false){let y=0;for(let r=base;r>0;r--,y++){const c=nextCol();for(let i=0;i<r;i++)cube(x-(r-1)/2+i,y,z,c)}if(top)crown(x,y,z)}
+function wall(x,z,w,h){for(let r=0;r<h;r++){const c=nextCol();for(let i=0;i<w;i++)cube(x-(w-1)/2+i,r,z,(i+r)%2?c:PAL.ivory)}}
+function temple(x,z,levels,span=3){
+  let y=0;
+  for(let l=0;l<levels;l++){
+    const s=span-l*.6;
+    for(const dx of [-s/2,s/2])addBlock(.6,1.8,.6,x+dx,y,z,PAL.ivory);
+    y+=1.8;addBlock(s+1,.3,1,x,y,z,l%2?PAL.crimson:PAL.purple);y+=.3;
+  }
+  crown(x,y,z);
+}
+function castle(x,z){
+  tower(x-2.5,z,4);tower(x+2.5,z,4);
+  wall(x,z,3,2);
+  addBlock(4,.3,1,x,2,z,PAL.purple);
+  crown(x,2.3,z);
+  cube(x-2.5,4,z,PAL.gold);cube(x+2.5,4,z,PAL.gold);
+}
+
+// hand-made levels, then generated ones
+const LEVELS=[
+  {balls:3,build(){tower(0,0,5,true)}},
+  {balls:4,build(){tower(-2,0,4);tower(2,0,4,true)}},
+  {balls:4,build(){pyramid(0,0,4,true)}},
+  {balls:5,build(){wall(0,0,6,3)}},
+  {balls:5,build(){castle(0,0)}},
+  {balls:6,build(){temple(0,0,3)}},
+  {balls:6,build(){pyramid(-2.3,-.8,3);pyramid(2.3,.8,3);tower(0,0,5,true)}},
+  {balls:6,build(){tower(-3,-1,6);tower(-1,.8,6);tower(1,-1,6);tower(3,.8,6,true)}},
+  {balls:7,build(){wall(0,-1,6,3);temple(0,1.1,2,2.6)}},
+  {balls:7,build(){castle(0,-.9);pyramid(-2.2,1.1,3);pyramid(2.2,1.1,3)}},
+];
+function rngFor(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
+function generated(n){
+  const r=rngFor(n*977+13),slots=[-2.6,0,2.6];
+  return{build(){
+    for(const x of slots){
+      const z=(r()-.5)*2,k=r();
+      if(k<.3)tower(x,z,4+((r()*3)|0),r()<.5);
+      else if(k<.55)pyramid(x,z,3,r()<.4);
+      else if(k<.75)temple(x,z,2,2.2);
+      else{wall(x,z,2,3+((r()*2)|0))}
+    }
+  },balls:0};
+}
+function levelDef(n){return n<=LEVELS.length?LEVELS[n-1]:generated(n)}
+
+// ------------------------------------------------------------------ game state
+const save=(()=>{try{return JSON.parse(localStorage.getItem('policyProtector')||'{}')}catch(e){return{}}})();
+let level=save.level||1;
+const G_={state:'menu',ballsLeft:0,ballsMax:0,total:0,score:0,outT:0,winT:0,cool:0};
+function persist(){try{localStorage.setItem('policyProtector',JSON.stringify({level,stars:save.stars||{},prize:save.prize||null}))}catch(e){}}
+
+function clearLevel(){
+  for(const b of blocks){scene.remove(b.mesh);world.removeBody(b.body)}
+  for(const b of balls){scene.remove(b.mesh);world.removeBody(b.body)}
+  blocks=[];balls=[];
+}
+function loadLevel(n){
+  clearLevel();ci=n*3;
+  const d=levelDef(n);d.build();
+  G_.total=blocks.length;
+  G_.ballsMax=d.balls||Math.min(9,Math.max(6,Math.ceil(G_.total/5)+2));
+  G_.ballsLeft=G_.ballsMax;G_.score=0;G_.outT=0;G_.winT=0;G_.cool=0;G_.state='play';
+  $('lvl').innerHTML='<small>Level</small>'+n;
+  renderBalls();renderProg();
+}
+function renderBalls(){
+  const dots=$('ballDots');dots.innerHTML='';
+  for(let i=0;i<G_.ballsMax;i++){const d=document.createElement('div');d.className='dot'+(i>=G_.ballsLeft?' used':'');dots.appendChild(d)}
+  $('ballNum').textContent=G_.ballsLeft;
+}
+function renderProg(){
+  const cleared=blocks.filter(b=>b.down).length;
+  $('progFill').style.width=(G_.total?cleared/G_.total*100:0)+'%';
+  $('progTxt').textContent=`${cleared} / ${G_.total} risks`;
+}
+
+// ------------------------------------------------------------------ aiming + firing
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2(),aimPlane=new THREE.Plane(new THREE.Vector3(0,0,1),-PZ);
+const aimPoint=new THREE.Vector3(0,1.5,PZ);
+function pickPoint(cx,cy){
+  const r=cv.getBoundingClientRect();
+  ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);
+  ray.setFromCamera(ndc,camera);
+  const hits=ray.intersectObjects(blocks.filter(b=>!b.down).map(b=>b.mesh),false);
+  if(hits.length)return hits[0].point.clone();
+  const p=new THREE.Vector3();
+  if(ray.ray.intersectPlane(aimPlane,p))return p;
+  return ray.ray.at(30,p);
+}
+function muzzle(){return pivot.localToWorld(new THREE.Vector3(0,0,-1.95))}
+function launchVelocity(from,to){
+  const d=to.clone().sub(from),dist=d.length();
+  const T=Math.min(1,Math.max(.25,dist/42));
+  return d.multiplyScalar(1/T).add(new THREE.Vector3(0,.5*G*T,0));
+}
+function aimAt(p){
+  const from=new THREE.Vector3();pivot.getWorldPosition(from);
+  const v=launchVelocity(from,p);
+  pivot.rotation.y=-Math.atan2(v.x,-v.z);
+  pivot.rotation.x=Math.atan2(v.y,Math.hypot(v.x,v.z));
+}
+const ballGeo=new THREE.SphereGeometry(BALL_R,20,14),ballMat=mat(0x24242c,{metalness:.6,roughness:.3});
+let recoil=0;
+function fireAt(p){
+  if(G_.state!=='play'||G_.ballsLeft<=0||G_.cool>0)return false;
+  aimAt(p);pivot.updateMatrixWorld(true);
+  const from=muzzle(),v=launchVelocity(from,p);
+  const body=new CANNON.Body({mass:14,material:mBall,linearDamping:.01});
+  body.addShape(new CANNON.Sphere(BALL_R));body.position.set(from.x,from.y,from.z);body.velocity.set(v.x,v.y,v.z);
+  world.addBody(body);
+  const mesh=new THREE.Mesh(ballGeo,ballMat);mesh.castShadow=true;scene.add(mesh);
+  balls.push({mesh,body,age:0});
+  G_.ballsLeft--;G_.cool=.32;G_.outT=0;recoil=1;renderBalls();
+  smoke(from,v.clone().normalize());
+  sfx('boom');
+  return true;
+}
+// smoke puffs
+const puffs=[],puffGeo=new THREE.SphereGeometry(.35,8,6);
+function smoke(at,dir){
+  for(let i=0;i<5;i++){
+    const m=new THREE.Mesh(puffGeo,new THREE.MeshStandardMaterial({color:0xf2efe8,transparent:true,opacity:.55,roughness:1,depthWrite:false}));
+    m.position.copy(at);scene.add(m);
+    puffs.push({m,v:dir.clone().multiplyScalar(4+Math.random()*3).add(new THREE.Vector3((Math.random()-.5)*1.5,Math.random()*1.2,(Math.random()-.5)*1.5)),life:.45+Math.random()*.25,max:1});
+  }
+}
+
+// pointer: tap to fire, hover to aim
+let downAt=null;
+cv.addEventListener('pointermove',e=>{if(G_.state==='play'){aimPoint.copy(pickPoint(e.clientX,e.clientY));aimAt(aimPoint)}});
+cv.addEventListener('pointerdown',e=>{initAudio();downAt={x:e.clientX,y:e.clientY,t:performance.now()};if(G_.state==='play'){aimPoint.copy(pickPoint(e.clientX,e.clientY));aimAt(aimPoint)}});
+cv.addEventListener('pointerup',e=>{
+  if(!downAt)return;const moved=Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y);downAt=null;
+  if(moved<24)fireAt(pickPoint(e.clientX,e.clientY));
+});
+addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='Enter')&&G_.state==='play'&&document.activeElement===document.body){e.preventDefault();fireAt(aimPoint)}});
+
+// ------------------------------------------------------------------ popups
+const tmpV=new THREE.Vector3();
+function popup(pos,text){
+  tmpV.copy(pos).project(camera);
+  const r=cv.getBoundingClientRect();
+  const x=clamp((tmpV.x+1)/2*r.width,40,r.width-40),y=clamp((1-tmpV.y)/2*r.height,80,r.height-80);
+  const d=document.createElement('div');d.className='pop';d.textContent=text;d.style.left=x+'px';d.style.top=y+'px';
+  document.body.appendChild(d);setTimeout(()=>d.remove(),950);
+}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+
+// ------------------------------------------------------------------ audio
+let AC=null,noiseBuf=null,lastKnock=0;
+function initAudio(){try{if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();noiseBuf=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}AC.resume()}catch(e){AC=null}}
+function sfx(k,v=0){
+  if(!AC)return;
+  try{
+    const t=AC.currentTime;
+    if(k==='boom'){
+      const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=noiseBuf;f.type='lowpass';f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(120,t+.5);
+      g.gain.setValueAtTime(.7,t);g.gain.exponentialRampToValueAtTime(.001,t+.55);s.connect(f).connect(g).connect(AC.destination);s.start(t);s.stop(t+.6);
+      const o=AC.createOscillator(),og=AC.createGain();o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(38,t+.35);og.gain.setValueAtTime(.6,t);og.gain.exponentialRampToValueAtTime(.001,t+.4);o.connect(og).connect(AC.destination);o.start(t);o.stop(t+.45);
+    }else if(k==='knock'){
+      if(t-lastKnock<.05)return;lastKnock=t;
+      const o=AC.createOscillator(),g=AC.createGain(),a=Math.min(.35,v/60);o.type='triangle';o.frequency.setValueAtTime(260+Math.random()*120,t);o.frequency.exponentialRampToValueAtTime(90,t+.12);
+      g.gain.setValueAtTime(a,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+.18);
+    }else if(k==='win'){
+      [523,659,784,1047].forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*.11);g.gain.linearRampToValueAtTime(.08,t+i*.11+.01);g.gain.exponentialRampToValueAtTime(.001,t+i*.11+.3);o.connect(g).connect(AC.destination);o.start(t+i*.11);o.stop(t+i*.11+.32)});
+    }else if(k==='drop'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.setValueAtTime(700,t);o.frequency.exponentialRampToValueAtTime(1100,t+.08);g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.001,t+.12);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+.14);
+    }
+  }catch(e){}
+}
+
+// ------------------------------------------------------------------ loop
+function onFallen(b){
+  b.down=true;G_.score+=10;renderProg();sfx('drop');
+  popup(b.mesh.position,'+10');
+}
+function update(dt){
+  world.step(1/60,dt,4);
+  for(const b of blocks){
+    b.mesh.position.copy(b.body.position);b.mesh.quaternion.copy(b.body.quaternion);
+    if(!b.down){const p=b.body.position;if(p.y<-.9||Math.abs(p.x)>PW/2+.15||Math.abs(p.z-PZ)>PD/2+.15)onFallen(b)}
+  }
+  for(const b of balls){b.mesh.position.copy(b.body.position);b.mesh.quaternion.copy(b.body.quaternion);b.age+=dt}
+  for(const b of balls)if(b.body.position.y<-40||b.age>9){scene.remove(b.mesh);world.removeBody(b.body);b.gone=true}
+  balls=balls.filter(b=>!b.gone);
+  for(const b of blocks)if(b.down&&b.body.position.y<-60&&b.body.type!==CANNON.Body.STATIC){b.body.sleep()}
+  for(let i=puffs.length-1;i>=0;i--){const p=puffs[i];p.life-=dt;p.m.position.addScaledVector(p.v,dt);p.v.multiplyScalar(.92);p.m.scale.setScalar(.6+(1-p.life)*1.4);p.m.material.opacity=Math.max(0,p.life)*.9;if(p.life<=0){scene.remove(p.m);p.m.material.dispose();puffs.splice(i,1)}}
+  if(G_.cool>0)G_.cool-=dt;
+  recoil=Math.max(0,recoil-dt*5);
+  pivot.position.z=recoil*.35;
+  camera.position.set(CAM_POS.x+(Math.random()-.5)*recoil*.08,CAM_POS.y+(Math.random()-.5)*recoil*.08,CAM_POS.z);
+  if(G_.state==='play'){
+    const left=blocks.filter(b=>!b.down).length;
+    if(left===0){G_.winT+=dt;if(G_.winT>.7)win()}
+    else if(G_.ballsLeft===0){
+      G_.outT+=dt;
+      const settled=balls.length===0||balls.every(b=>b.body.velocity.length()<1||b.body.position.y<-3);
+      const still=blocks.every(b=>b.down||b.body.sleepState===CANNON.Body.SLEEPING||b.body.velocity.length()<.3);
+      if((G_.outT>2.5&&settled&&still)||G_.outT>7)lose(left);
+    }
+  }
+  if(window.__clouds)for(const [i,c] of window.__clouds.entries())c.position.x+=dt*(.25+i*.05)*(i%2?1:-1);
+}
+const QUIZ=[
+  {q:'Does a standard homeowners policy cover flood damage?',a:['Yes','No'],c:1,e:'Usually not. Flood is normally a separate policy, through the National Flood Insurance Program or a private insurer.'},
+  {q:'What is a deductible?',a:['What you pay before insurance pays','Your monthly bill'],c:0,e:'Right: the deductible is your share of a claim. The monthly or yearly bill is the premium.'},
+  {q:'Auto liability coverage pays for…',a:['Damage you cause to others','Repairs to your own car'],c:0,e:'Liability covers injuries and damage you cause to other people. Your own car is covered by collision and comprehensive.'},
+  {q:'Term life insurance lasts…',a:['A set number of years','Your whole life'],c:0,e:'Term covers a set period, often 10 to 30 years. Whole and universal life are built to last a lifetime.'},
+  {q:'Does a standard homeowners policy cover earthquakes?',a:['Yes','No'],c:1,e:'Usually not. Earthquake coverage is normally a separate policy or an added endorsement.'},
+  {q:'A higher deductible usually means…',a:['A lower premium','A higher premium'],c:0,e:'Taking on more of each claim yourself usually lowers what you pay for the policy.'},
+  {q:'What does an umbrella policy add?',a:['Extra liability coverage','Extra rain damage coverage'],c:0,e:'An umbrella policy adds liability coverage above your home and auto limits, which helps if you are sued.'},
+  {q:'Who receives a life insurance payout?',a:['The beneficiary','The policyholder'],c:0,e:'The beneficiary is the person or people you name to receive the death benefit.'},
+  {q:'Can renters insurance cover your things away from home?',a:['Often, yes','Never'],c:0,e:'Many renters policies cover personal property away from home, up to a limit. Check the policy.'},
+  {q:'Should you review your coverage after a big life change?',a:['Yes','No need'],c:0,e:'A new home, marriage, baby or car is a good time to check your coverage still fits.'},
+];
+function showQuiz(n){
+  const q=QUIZ[(n-1)%QUIZ.length],box=$('qOpts');
+  $('qText').textContent=q.q;$('qAns').hidden=true;box.innerHTML='';
+  q.a.forEach((txt,i)=>{const b=document.createElement('button');b.type='button';b.className='opt';b.textContent=txt;
+    b.onclick=()=>{box.querySelectorAll('button').forEach((x,j)=>{x.disabled=true;if(j===q.c)x.classList.add('right');else if(j===i)x.classList.add('wrong')});
+      $('qAns').textContent=(i===q.c?'Correct! ':'Not quite. ')+q.e;$('qAns').hidden=false};
+    box.appendChild(b)});
+}
+function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderAgent(){
+  const link=AGENT.bookingUrl&&/^https:\/\//.test(AGENT.bookingUrl)?`<a href="${esc(AGENT.bookingUrl)}" target="_blank" rel="noopener">${esc(AGENT.bookingText)} →</a>`:'';
+  const html=`<b>${esc(AGENT.name)}</b><span>${esc(AGENT.title)} · ${esc(AGENT.agency)}</span><span class="lic">${esc(AGENT.license)}</span><span class="ph">${esc(AGENT.phone)}</span>${link}`;
+  document.querySelectorAll('.agent').forEach(el=>el.innerHTML=html);
+}
+renderAgent();
+let prizePending=false;
+function prizeFine(){return `No purchase, quote or meeting necessary. Not conditioned on buying insurance. One per person while supplies last. Retail value ${PRIZE.value}. Show this screen ${PRIZE.where} to claim.`}
+function maybePrize(){
+  if(!PRIZE.enabled||save.prize||level<PRIZE.afterLevel)return;
+  const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='PP-';for(let i=0;i<5;i++)code+=a[(Math.random()*a.length)|0];
+  save.prize=code;prizePending=true;
+}
+function showPrize(){
+  $('prizeTxt').textContent=`You cleared level ${PRIZE.afterLevel}. You've earned ${PRIZE.item}. Show this screen ${PRIZE.where} to claim it.`;
+  $('prizeCode').textContent=save.prize;$('prizeFine').textContent=prizeFine();
+  $('winO').hidden=true;$('prizeO').hidden=false;$('prizeNext').focus();
+}
+function win(){
+  G_.state='won';sfx('win');
+  const stars=G_.ballsLeft>=2?3:G_.ballsLeft===1?2:1;
+  G_.score+=G_.ballsLeft*50;
+  save.stars=save.stars||{};save.stars[level]=Math.max(save.stars[level]||0,stars);
+  maybePrize();
+  const finished=level;level=Math.max(level,finished+1);persist();level=finished;
+  showQuiz(finished);
+  $('stars').querySelectorAll('span').forEach((s,i)=>s.className=i<stars?'on':'');
+  $('wBalls').textContent=G_.ballsLeft;$('wScore').textContent=G_.score;
+  $('winO').hidden=false;$('nextBtn').focus();
+}
+function lose(left){
+  G_.state='lost';
+  $('loseTxt').textContent=left===1?'1 risk is still standing.':`${left} risks are still standing.`;
+  $('loseO').hidden=false;$('retryBtn').focus();
+}
+function resize(){
+  const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);
+  camera.aspect=w/h;
+  // keep the whole platform in view on a tall phone screen
+  const minH=44*Math.PI/180;
+  camera.fov=camera.aspect<1.25?2*Math.atan(Math.tan(minH/2)/camera.aspect)*180/Math.PI:55;
+  camera.fov=Math.min(camera.fov,78);
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize',resize);resize();
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(G_.state!=='menu'||blocks.length)update(dt);
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+
+// ------------------------------------------------------------------ UI
+function play(n){level=n;['startO','winO','loseO','prizeO'].forEach(id=>$(id).hidden=true);loadLevel(n);cv.focus?.()}
+$('playBtn').onclick=()=>{initAudio();play(level)};
+$('nextBtn').onclick=()=>{if(prizePending){prizePending=false;showPrize()}else play(level+1)};
+$('prizeNext').onclick=()=>play(level+1);
+$('replayBtn').onclick=()=>play(level);
+$('retryBtn').onclick=()=>play(level);
+$('iconBtn').onclick=()=>{if(G_.state==='play'||G_.state==='lost')play(level)};
+$('resetBtn').onclick=()=>{level=1;save.stars={};persist();updateStart()};
+function updateStart(){
+  $('playBtn').textContent=`Play level ${level}`;
+  $('resetBtn').hidden=level<=1;
+  const ph=$('prizeHave');ph.hidden=!save.prize;if(save.prize)ph.textContent=`Your prize code: ${save.prize}. Show it ${PRIZE.where}.`;
+  const total=Object.values(save.stars||{}).reduce((a,b)=>a+b,0);
+  $('startSub').textContent=total?`You've earned ${total} ★ so far.`:'Fewer balls used, more stars earned.';
+}
+updateStart();
+// a level stands on the platform behind the start card
+ci=level*3;{const d=levelDef(level);d.build();G_.total=blocks.length;G_.ballsMax=G_.ballsLeft=d.balls||Math.min(9,Math.max(6,Math.ceil(G_.total/5)+2))}renderProg();renderBalls();
+$('lvl').innerHTML='<small>Level</small>'+level;
+requestAnimationFrame(frame);
+window.__cc={showPrize,get G(){return G_},get blocks(){return blocks},fireAt:(x,y,z)=>fireAt(new THREE.Vector3(x,y,z)),play,update};
+})();
+</script>
