@@ -432,12 +432,12 @@ function addPiece(shape,dims,x,y,z,color,o={}){
   return b;
 }
 const addBlock=(w,h,d,x,y,z,color,o)=>addPiece('box',[w,h,d],x,y,z,color,o);
-const shatterQ=[],boostQ=[];
+const shatterQ=[],boostQ=[],freed=[];
 const shards=[],shardGeo=new THREE.TetrahedronGeometry(.16);
 function shatter(b){
   if(b.down)return;
   const p=b.body.position,v=b.body.velocity;
-  world.removeBody(b.body);b.removed=true;scene.remove(b.mesh);
+  world.removeBody(b.body);b.removed=true;scene.remove(b.mesh);freed.push(p.clone());
   for(let i=0;i<12;i++){
     const m=new THREE.Mesh(shardGeo,kindMats.glass);m.position.set(p.x+(Math.random()-.5)*.8,p.y+(Math.random()-.5)*.8,p.z+(Math.random()-.5)*.8);scene.add(m);
     shards.push({m,v:new THREE.Vector3(v.x*.4+(Math.random()-.5)*7,v.y*.4+Math.random()*6,v.z*.4+(Math.random()-.5)*7),r:new THREE.Vector3(Math.random()*9,Math.random()*9,0),life:1.4});
@@ -659,6 +659,19 @@ function sfx(k,v=0){
 }
 
 // ------------------------------------------------------------------ loop
+// pieces sleep while they sit still, and a sleeping piece doesn't notice when what holds it up goes away.
+// So wake any sleeping piece near something that is moving or was just removed, and let gravity take it.
+function wakeNeighbours(){
+  const spots=freed.splice(0);
+  for(const b of blocks)if(!b.removed&&b.body.sleepState!==CANNON.Body.SLEEPING&&b.body.velocity.lengthSquared()>.09)spots.push(b.body.position);
+  for(const b of balls)spots.push(b.body.position);
+  if(!spots.length)return;
+  for(const b of blocks){
+    if(b.removed||b.body.sleepState!==CANNON.Body.SLEEPING)continue;
+    const q=b.body.position;
+    if(spots.some(s=>(s.x-q.x)**2+(s.y-q.y)**2+(s.z-q.z)**2<3.4))b.body.wakeUp();
+  }
+}
 function onFallen(b,pts=10){
   b.down=true;G_.score+=pts;renderProg();if(pts===10)sfx('drop');
   popup(b.mesh.position,'+'+pts);
@@ -667,6 +680,7 @@ function update(dt){
   world.step(1/60,dt,4);
   while(boostQ.length)boost(boostQ.shift());
   while(shatterQ.length)shatter(shatterQ.shift());
+  wakeNeighbours();
   for(let i=shards.length-1;i>=0;i--){const s=shards[i];s.life-=dt;s.v.y-=G*dt;s.m.position.addScaledVector(s.v,dt);s.m.rotation.x+=s.r.x*dt;s.m.rotation.y+=s.r.y*dt;if(s.life<=0){scene.remove(s.m);shards.splice(i,1)}}
   if(G_.state==='play')stat('sec',dt);
   for(const b of blocks){
