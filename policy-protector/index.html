@@ -243,8 +243,7 @@ const PRIZE={
 // ==================================================================
 
 // ------------------------------------------------------------------ constants
-const PZ=-13;                     // platform centre (z); its top surface is y=0
-const PW=8,PD=4;                 // platform width / depth
+const PZ=-13;                     // middle of the play area (z)
 const G=20;                       // gravity
 const BALL_R=.45;
 const PAL={purple:0x6b3fa0,crimson:0xc8323c,blue:0x2f6fb5,ivory:0xefe2c4,green:0x2e9d6b,gold:0xf2b632};
@@ -294,15 +293,7 @@ scene.add(sun,sun.target);
 const mat=(color,o={})=>new THREE.MeshStandardMaterial({color,roughness:.62,metalness:0,...o});
 // floating rock pillar with a stone platform on top
 {
-  const stone=mat(0x9a93b3),rock=mat(0x8c7a64,{flatShading:true}),grass=mat(0x5fbf5a);
-  const top=new THREE.Mesh(new THREE.BoxGeometry(PW,1,PD),stone);top.position.set(0,-.5,PZ);top.receiveShadow=true;scene.add(top);
-  const trim=new THREE.Mesh(new THREE.BoxGeometry(PW+.3,.22,PD+.3),mat(PAL.gold,{metalness:.1,roughness:.4}));trim.position.set(0,-.95,PZ);scene.add(trim);
-  const pillar=new THREE.Mesh(new THREE.CylinderGeometry(3.6,1.2,22,9,4),rock);pillar.position.set(0,-12.2,PZ);scene.add(pillar);
-  // banners hanging off the front edge
-  for(const x of [-3.2,3.2]){
-    const b=new THREE.Mesh(new THREE.PlaneGeometry(1.1,2.2),mat(PAL.purple,{side:THREE.DoubleSide}));b.position.set(x,-2.1,PZ+PD/2+.17);scene.add(b);
-    const s=new THREE.Mesh(new THREE.CircleGeometry(.32,5),mat(PAL.gold));s.position.set(x,-1.9,PZ+PD/2+.18);scene.add(s);
-  }
+  const grass=mat(0x5fbf5a);
   // distant hills and islands so the drop has somewhere to go
   const hill=mat(0x7cc37a,{flatShading:true}),far=mat(0x9fcfa0,{flatShading:true});
   const isl=(x,y,z,r,h,m)=>{const i=new THREE.Mesh(new THREE.ConeGeometry(r,h,7),m);i.position.set(x,y,z);i.rotation.x=Math.PI;scene.add(i);
@@ -341,9 +332,39 @@ world.addContactMaterial(new CANNON.ContactMaterial(mBlock,mStone,{friction:.22,
 world.addContactMaterial(new CANNON.ContactMaterial(mBall,mBlock,{friction:.3,restitution:.25}));
 world.addContactMaterial(new CANNON.ContactMaterial(mBall,mStone,{friction:.3,restitution:.35}));
 for(const m of [mBlock,mBall,mStone,mRubber])world.addContactMaterial(new CANNON.ContactMaterial(mRubber,m,{friction:.6,restitution:m===mBall?.9:.8}));
-{const b=new CANNON.Body({mass:0,material:mStone});b.addShape(new CANNON.Box(new CANNON.Vec3(PW/2,.5,PD/2)));b.position.set(0,-.5,PZ);world.addBody(b)}
 
-// ------------------------------------------------------------------ blocks
+// ------------------------------------------------------------------ platforms
+// every level stands on one or more stone platforms {x,z,w,d,top}; top is the height of the upper surface
+let plats=[],platObjs=[];
+const stoneM=mat(0x9a93b3),trimM=mat(PAL.gold,{metalness:.1,roughness:.4}),rockM=mat(0x8c7a64,{flatShading:true}),bannerM=mat(PAL.purple,{side:THREE.DoubleSide});
+function makePlats(list){
+  plats=list;
+  for(const p of list){
+    const g=new THREE.Group();
+    const top=new THREE.Mesh(new THREE.BoxGeometry(p.w,1,p.d),stoneM);top.position.y=-.5;top.receiveShadow=true;top.castShadow=true;g.add(top);
+    const trim=new THREE.Mesh(new THREE.BoxGeometry(p.w+.3,.22,p.d+.3),trimM);trim.position.y=-.95;g.add(trim);
+    const r=Math.min(p.w,p.d)*.42;
+    const pil=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.3,24,8,3),rockM);pil.position.y=-13;g.add(pil);
+    if(p.w>=5)for(const x of [-p.w/2+1.2,p.w/2-1.2]){const b=new THREE.Mesh(new THREE.PlaneGeometry(.9,1.8),bannerM);b.position.set(x,-1.9,p.d/2+.17);g.add(b)}
+    g.position.set(p.x,p.top,p.z);scene.add(g);
+    const body=new CANNON.Body({mass:0,material:mStone});body.addShape(new CANNON.Box(new CANNON.Vec3(p.w/2,.5,p.d/2)));
+    body.position.set(p.x,p.top-.5,p.z);world.addBody(body);
+    platObjs.push({g,body,top});
+  }
+}
+function clearPlats(){for(const o of platObjs){scene.remove(o.g);world.removeBody(o.body)}platObjs=[];plats=[]}
+// a piece is still in play while it sits over some platform
+function onAPlatform(p){return plats.some(q=>Math.abs(p.x-q.x)<=q.w/2+.15&&Math.abs(p.z-q.z)<=q.d/2+.15&&p.y>q.top-.9)}
+const PL={
+  solo:  [{x:0,z:-13,w:8,d:4,top:0}],
+  layers:[{x:0,z:-10.8,w:7,d:2.4,top:0},{x:0,z:-14.8,w:9,d:3,top:.3}],
+  trio:  [{x:-2.8,z:-10.8,w:3.2,d:2.4,top:0},{x:2.8,z:-10.8,w:3.2,d:2.4,top:0},{x:0,z:-15,w:9,d:3,top:.4}],
+  steps: [{x:0,z:-10.2,w:7,d:2,top:0},{x:0,z:-13,w:8,d:2,top:.7},{x:0,z:-15.8,w:9,d:2.2,top:1.4}],
+  pads:  [{x:-3.3,z:-11,w:2.2,d:2.2,top:-.4},{x:0,z:-11.8,w:2.4,d:2.4,top:.2},{x:3.3,z:-11,w:2.2,d:2.2,top:-.4},
+          {x:-1.9,z:-15.4,w:2.6,d:2.4,top:1.2},{x:1.9,z:-15.4,w:2.6,d:2.4,top:1.2}],
+};
+
+// ------------------------------------------------------------------ pieces
 let blocks=[],balls=[];
 const geoCache={},matCache={};
 const edgeMat=new THREE.LineBasicMaterial({color:0x1e0c3c,transparent:true,opacity:.35});
@@ -355,34 +376,62 @@ const kindMats={
 const glassEdge=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.9});
 let mixRng=Math.random,mix={};
 function pickKind(){let r=mixRng();for(const k in mix){if(r<mix[k])return k;r-=mix[k]}return'wood'}
-function addBlock(w,h,d,x,y,z,color,o={}){
-  const key=w+'x'+h+'x'+d;
-  if(!geoCache[key])geoCache[key]={g:new THREE.BoxGeometry(w,h,d),e:new THREE.EdgesGeometry(new THREE.BoxGeometry(w,h,d))};
+// triangular prism (a roof): triangle faces front and back, ridge runs front to back
+function prismPts(w,h,d){return[[-w/2,-h/2,d/2],[w/2,-h/2,d/2],[0,h/2,d/2],[-w/2,-h/2,-d/2],[w/2,-h/2,-d/2],[0,h/2,-d/2]]}
+const PRISM_FACES=[[0,1,2],[3,5,4],[0,3,4,1],[0,2,5,3],[1,4,5,2]];
+function prismGeo(w,h,d){
+  const P=prismPts(w,h,d),pos=[];
+  for(const f of PRISM_FACES)for(let i=1;i<f.length-1;i++)for(const k of [f[0],f[i],f[i+1]])pos.push(...P[k]);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.computeVertexNormals();return g;
+}
+const CYL_Q=new CANNON.Quaternion();CYL_Q.setFromAxisAngle(new CANNON.Vec3(1,0,0),-Math.PI/2);
+// shape: box [w,h,d] | cyl [r,h] upright | ball [r] | prism [w,h,d]; (x,y,z) is the bottom centre relative to the current platform
+let B={x:0,y:0,z:-13};
+const on=i=>{const p=plats[i];B={x:p.x,y:p.top,z:p.z}};
+function addPiece(shape,dims,x,y,z,color,o={}){
+  const key=shape+dims.join('x');
+  if(!geoCache[key]){
+    let g;
+    if(shape==='box')g=new THREE.BoxGeometry(...dims);
+    else if(shape==='cyl')g=new THREE.CylinderGeometry(dims[0],dims[0],dims[1],18);
+    else if(shape==='ball')g=new THREE.SphereGeometry(dims[0],18,12);
+    else g=prismGeo(...dims);
+    geoCache[key]={g,e:shape==='ball'?null:new THREE.EdgesGeometry(g,30)};
+  }
   if(!matCache[color])matCache[color]=mat(color,color===PAL.gold?{metalness:.12,roughness:.35,emissive:0x3a2600}:{});
   const kind=o.kind||'wood';
   const mesh=new THREE.Mesh(geoCache[key].g,kindMats[kind]||matCache[color]);mesh.castShadow=kind!=='glass';mesh.receiveShadow=true;
-  mesh.add(new THREE.LineSegments(geoCache[key].e,kind==='glass'?glassEdge:edgeMat));
-  if(o.crown)mesh.add(crownDeco(w,h));
+  if(geoCache[key].e)mesh.add(new THREE.LineSegments(geoCache[key].e,kind==='glass'?glassEdge:edgeMat));
+  if(o.crown)mesh.add(crownDeco(dims[0],dims[1]));
   scene.add(mesh);
-  const body=new CANNON.Body({mass:o.heavy?w*h*d*1.6:w*h*d*KIND[kind].mass,material:kind==='rubber'?mRubber:mBlock,sleepSpeedLimit:.25,sleepTimeLimit:.6,
-    linearDamping:kind==='feather'?.01:.04,angularDamping:.06});
-  body.addShape(new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2)));
-  body.position.set(x,y+h/2,PZ+z);
+  let vol,h;
+  if(shape==='box'){vol=dims[0]*dims[1]*dims[2];h=dims[1]}
+  else if(shape==='cyl'){vol=Math.PI*dims[0]**2*dims[1];h=dims[1]}
+  else if(shape==='ball'){vol=4/3*Math.PI*dims[0]**3;h=dims[0]*2}
+  else{vol=dims[0]*dims[1]*dims[2]/2;h=dims[1]}
+  const body=new CANNON.Body({mass:vol*(o.heavy?1.6:KIND[kind].mass),material:kind==='rubber'?mRubber:mBlock,sleepSpeedLimit:.25,sleepTimeLimit:.6,
+    linearDamping:kind==='feather'?.01:.04,angularDamping:shape==='ball'?.3:.06});
+  if(shape==='box')body.addShape(new CANNON.Box(new CANNON.Vec3(dims[0]/2,dims[1]/2,dims[2]/2)));
+  else if(shape==='cyl')body.addShape(new CANNON.Cylinder(dims[0],dims[0],dims[1],12),new CANNON.Vec3(),CYL_Q);
+  else if(shape==='ball')body.addShape(new CANNON.Sphere(dims[0]));
+  else body.addShape(new CANNON.ConvexPolyhedron(prismPts(...dims).map(p=>new CANNON.Vec3(...p)),PRISM_FACES));
+  body.position.set(B.x+x,B.y+y+h/2,B.z+z);
   world.addBody(body);body.sleep();
   mesh.position.copy(body.position);
-  const b={mesh,body,kind,down:false,hit:new Set()};blocks.push(b);body.blockRef=b;
+  const b={mesh,body,kind,shape,down:false,hit:new Set()};blocks.push(b);body.blockRef=b;
   body.addEventListener('collide',e=>{
     const v=Math.abs(e.contact.getImpactVelocityAlongNormal()),byBall=e.body.material===mBall;
     if(byBall&&v>3)sfx(kind==='rubber'?'boing':'knock',v);
     if(b.down)return;
     if(kind==='glass'&&(v>(byBall?3:6)))shatterQ.push(b);
     if(kind==='feather'&&e.body.blockRef&&!b.hit.has(e.body.id)&&body.velocity.length()>8){
-      // a fast feather block hits like a hammer
+      // a fast feather piece hits like a hammer
       b.hit.add(e.body.id);boostQ.push([b,e.body.blockRef]);
     }
   });
   return b;
 }
+const addBlock=(w,h,d,x,y,z,color,o)=>addPiece('box',[w,h,d],x,y,z,color,o);
 const shatterQ=[],boostQ=[];
 const shards=[],shardGeo=new THREE.TetrahedronGeometry(.16);
 function shatter(b){
@@ -409,22 +458,26 @@ function crownDeco(w,h){
   const gem=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),mat(PAL.crimson,{roughness:.2}));gem.position.set(0,h/2+.16,w*.4);g.add(gem);
   return g;
 }
-// structure helpers: x/z relative to the platform centre, y = bottom
+// structure helpers: x/z relative to the current platform (see on()), y = bottom
 let ci=0;const nextCol=()=>COLS[(ci++)%COLS.length];
 const cube=(x,y,z,c)=>addBlock(1,1,1,x,y,z,c??nextCol(),{kind:c===PAL.gold?'wood':pickKind()});
 const crown=(x,y,z)=>addBlock(1,1,1,x,y,z,PAL.gold,{crown:1,heavy:1});
+const orb=(x,y,z)=>addPiece('ball',[.4],x,y,z,PAL.gold);
+const barrel=(x,y,z,c)=>addPiece('cyl',[.45,1],x,y,z,c??nextCol(),{kind:pickKind()});
+const column=(x,y,z)=>addPiece('cyl',[.28,1.8],x,y,z,PAL.ivory);
+const roof=(x,y,z,w,c)=>addPiece('prism',[w,.9,1.1],x,y,z,c??PAL.crimson);
 function tower(x,z,n,top=false){const c=nextCol(),c2=nextCol();for(let i=0;i<n;i++)cube(x,i,z,i%2?c2:c);if(top)crown(x,n,z);return n}
 function pyramid(x,z,base,top=false){let y=0;for(let r=base;r>0;r--,y++){const c=nextCol();for(let i=0;i<r;i++)cube(x-(r-1)/2+i,y,z,c)}if(top)crown(x,y,z)}
 function wall(x,z,w,h){for(let r=0;r<h;r++){const c=nextCol();for(let i=0;i<w;i++)cube(x-(w-1)/2+i,r,z,(i+r)%2?c:PAL.ivory)}}
-function temple(x,z,levels,span=3){
-  let y=0;
-  for(let l=0;l<levels;l++){
-    const s=span-l*.6;
-    for(const dx of [-s/2,s/2])addBlock(.6,1.8,.6,x+dx,y,z,PAL.ivory);
-    y+=1.8;addBlock(s+1,.3,1,x,y,z,l%2?PAL.crimson:PAL.purple);y+=.3;
-  }
-  crown(x,y,z);
+function barrels(x,z,base,top=true){let y=0;for(let r=base;r>0;r--,y++)for(let i=0;i<r;i++)barrel(x-(r-1)*.48+i*.96,y,z);if(top)orb(x,y,z)}
+function house(x,z,c){addBlock(1.4,1,1,x,0,z,c??nextCol(),{kind:pickKind()});roof(x,1,z,1.6)}
+function colonnade(x,z,n,span){
+  for(let i=0;i<n;i++)column(x-span/2+i*span/(n-1),0,z);
+  addBlock(span+.8,.25,1,x,1.8,z,PAL.purple);roof(x,2.05,z,span+.6,PAL.gold);
 }
+function coins(x,z,n){for(let i=0;i<n;i++)addPiece('cyl',[.42,.2],x,i*.2,z,PAL.gold)}
+// a row of dominoes running front to back: knock the front one and the row tips into the layer behind
+function dominoes(x,z,n){const c=nextCol();for(let i=0;i<n;i++)addBlock(.8,2,.22,x,0,z+.95-i*1.95/(n-1),i%2?c:PAL.ivory)}
 function castle(x,z){
   tower(x-2.5,z,4);tower(x+2.5,z,4);
   wall(x,z,3,2);
@@ -435,31 +488,34 @@ function castle(x,z){
 
 // hand-made levels, then generated ones
 const LEVELS=[
-  {balls:3,build(){tower(0,0,5,true)}},
-  {balls:4,build(){tower(-2,0,4);tower(2,0,4,true)}},
-  {balls:4,build(){pyramid(0,0,4,true)}},
-  {balls:5,build(){wall(0,0,6,3)}},
-  {balls:5,build(){castle(0,0)}},
-  {balls:6,build(){temple(0,0,3)}},
-  {balls:6,build(){pyramid(-2.3,-.8,3);pyramid(2.3,.8,3);tower(0,0,5,true)}},
-  {balls:6,build(){tower(-3,-1,6);tower(-1,.8,6);tower(1,-1,6);tower(3,.8,6,true)}},
-  {balls:7,build(){wall(0,-1,6,3);temple(0,1.1,2,2.6)}},
-  {balls:7,build(){castle(0,-.9);pyramid(-2.2,1.1,3);pyramid(2.2,1.1,3)}},
+  {balls:3,plats:PL.solo,build(){on(0);tower(0,0,5,true)}},
+  {balls:5,plats:PL.solo,build(){on(0);barrels(0,0,4)}},
+  {balls:6,plats:PL.layers,build(){on(0);wall(0,0,5,1);on(1);tower(-2.6,0,4);tower(2.6,0,4,true);house(0,0)}},
+  {balls:6,plats:PL.layers,build(){on(0);dominoes(-1.6,0,4);dominoes(1.6,0,4);on(1);barrels(-1.6,.9,2);barrels(1.6,.9,2);colonnade(0,-.6,3,2.4);tower(-3.6,0,3);tower(3.6,0,3)}},
+  {balls:8,plats:PL.trio,build(){on(0);barrels(0,0,3);on(1);barrels(0,0,3);on(2);tower(-3.2,0,4,true);tower(3.2,0,4,true);house(-1,0);house(1,0)}},
+  {balls:9,plats:PL.steps,build(){on(0);coins(-2,0,6);coins(2,0,6);house(0,0);on(1);wall(0,0,6,2);on(2);colonnade(-2.3,0,2,2);colonnade(2.3,0,2,2)}},
+  {balls:8,plats:PL.pads,build(){on(0);tower(0,0,3,true);on(1);barrels(0,0,2);on(2);tower(0,0,3,true);on(3);house(0,0);orb(0,1.9,0);on(4);barrels(0,0,2)}},
+  {balls:9,plats:PL.layers,build(){on(0);dominoes(0,0,4);house(-2.3,0);house(2.3,0);on(1);pyramid(0,0,4,true);tower(-3.6,0,4);tower(3.6,0,4)}},
+  {balls:9,plats:PL.trio,build(){on(0);colonnade(0,0,2,1.8);on(1);colonnade(0,0,2,1.8);on(2);wall(0,0,7,3)}},
+  {balls:11,plats:PL.steps,build(){on(0);house(-2.2,0);house(0,0);house(2.2,0);on(1);barrels(-2,0,3);barrels(2,0,3);on(2);castle(0,0)}},
 ];
 function rngFor(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
 function generated(n){
-  const r=rngFor(n*977+13),slots=[-2.6,0,2.6];
-  return{build(){
-    for(const x of slots){
-      const z=(r()-.5)*2,k=r();
-      if(k<.3)tower(x,z,4+((r()*3)|0),r()<.5);
-      else if(k<.55)pyramid(x,z,3,r()<.4);
-      else if(k<.75)temple(x,z,2,2.2);
-      else{wall(x,z,2,3+((r()*2)|0))}
-    }
-  },balls:0};
+  const r=rngFor(n*977+13),keys=['layers','trio','steps','pads'],plats=PL[keys[(r()*keys.length)|0]];
+  const small=[x=>tower(x,0,3+((r()*2)|0),r()<.5),x=>barrels(x,0,2),x=>house(x,0),x=>coins(x,0,5)];
+  const big=[x=>pyramid(x,0,3,r()<.4),x=>barrels(x,0,3),x=>colonnade(x,0,2,1.8),x=>{house(x-.9,0);house(x+.9,0)},x=>wall(x,0,3,2)];
+  return{plats,balls:0,build(){
+    plats.forEach((p,i)=>{
+      on(i);
+      if(p.w<3.5)small[(r()*small.length)|0](0);
+      else{const slots=p.w>=8?[-2.8,0,2.8]:[-1.7,1.7];for(const x of slots)(r()<.5?big:small)[(r()*(r()<.5?big:small).length)|0](x)}
+    });
+  }};
 }
-function levelDef(n){return n<=LEVELS.length?LEVELS[n-1]:generated(n)}
+function levelDef(n){
+  const d=n<=LEVELS.length?LEVELS[n-1]:generated(n);
+  return{balls:d.balls,build(){makePlats(d.plats);d.build()}};
+}
 
 // ------------------------------------------------------------------ game state
 const save=(()=>{try{return JSON.parse(localStorage.getItem('policyProtector')||'{}')}catch(e){return{}}})();
@@ -470,6 +526,7 @@ function persist(){try{localStorage.setItem('policyProtector',JSON.stringify({le
 
 function clearLevel(){
   for(const b of blocks){scene.remove(b.mesh);if(!b.removed)world.removeBody(b.body)}
+  clearPlats();
   for(const s of shards)scene.remove(s.m);shards.length=0;shatterQ.length=0;boostQ.length=0;
   for(const b of balls){scene.remove(b.mesh);world.removeBody(b.body)}
   blocks=[];balls=[];
@@ -478,7 +535,7 @@ function loadLevel(n){
   clearLevel();ci=n*3;mix=mixFor(n);mixRng=rngFor(n*31+7);
   const d=levelDef(n);d.build();
   G_.total=blocks.length;
-  G_.ballsMax=d.balls||Math.min(9,Math.max(6,Math.ceil(G_.total/5)+2));
+  G_.ballsMax=d.balls||Math.min(12,Math.max(6,Math.ceil(G_.total/4)+2));
   G_.ballsLeft=G_.ballsMax;G_.score=0;G_.outT=0;G_.winT=0;G_.cool=0;G_.state='play';
   $('lvl').innerHTML='<small>Level</small>'+n;
   renderBalls();renderProg();
@@ -505,7 +562,7 @@ function pickPoint(cx,cy){
   const r=cv.getBoundingClientRect();
   ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);
   ray.setFromCamera(ndc,camera);
-  const hits=ray.intersectObjects(blocks.filter(b=>!b.down).map(b=>b.mesh),false);
+  const hits=ray.intersectObjects(blocks.filter(b=>!b.down).map(b=>b.mesh).concat(platObjs.map(o=>o.top)),false);
   if(hits.length)return hits[0].point.clone();
   const p=new THREE.Vector3();
   if(ray.ray.intersectPlane(aimPlane,p))return p;
@@ -614,7 +671,7 @@ function update(dt){
   if(G_.state==='play')stat('sec',dt);
   for(const b of blocks){
     b.mesh.position.copy(b.body.position);b.mesh.quaternion.copy(b.body.quaternion);
-    if(!b.down&&!b.removed){const p=b.body.position;if(p.y<-.9||Math.abs(p.x)>PW/2+.15||Math.abs(p.z-PZ)>PD/2+.15)onFallen(b)}
+    if(!b.down&&!b.removed&&!onAPlatform(b.body.position))onFallen(b);
   }
   for(const b of balls){b.mesh.position.copy(b.body.position);b.mesh.quaternion.copy(b.body.quaternion);b.age+=dt}
   for(const b of balls)if(b.body.position.y<-40||b.age>9){scene.remove(b.mesh);world.removeBody(b.body);b.gone=true}
@@ -709,7 +766,7 @@ function renderAgent2(){
 }
 function win(){
   G_.state='won';sfx('win');
-  const stars=G_.ballsLeft>=2?3:G_.ballsLeft===1?2:1;
+  const stars=G_.ballsLeft>=Math.max(2,Math.ceil(G_.ballsMax*.3))?3:G_.ballsLeft>=1?2:1;
   G_.score+=G_.ballsLeft*50;
   save.stars=save.stars||{};save.stars[level]=Math.max(save.stars[level]||0,stars);
   const before=Object.keys(save.best).length?myRank():RIVALS.length+1;
@@ -783,7 +840,7 @@ function updateStart(){
 }
 updateStart();
 // a level stands on the platform behind the start card
-ci=level*3;mix=mixFor(level);mixRng=rngFor(level*31+7);{const d=levelDef(level);d.build();G_.total=blocks.length;G_.ballsMax=G_.ballsLeft=d.balls||Math.min(9,Math.max(6,Math.ceil(G_.total/5)+2))}renderProg();renderBalls();
+ci=level*3;mix=mixFor(level);mixRng=rngFor(level*31+7);{const d=levelDef(level);d.build();G_.total=blocks.length;G_.ballsMax=G_.ballsLeft=d.balls||Math.min(12,Math.max(6,Math.ceil(G_.total/4)+2))}renderProg();renderBalls();
 $('lvl').innerHTML='<small>Level</small>'+level;
 openAgent();
 requestAnimationFrame(frame);
