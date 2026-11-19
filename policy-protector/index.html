@@ -38,8 +38,8 @@ body{background:var(--sky);color:var(--ivory);font-family:var(--body);overflow:h
   text-shadow:0 1px 2px rgba(0,0,0,.6);font-variant-numeric:tabular-nums}
 #balls{display:flex;align-items:center;gap:10px;background:var(--purple);border:3px solid var(--gold);border-radius:999px;padding:6px 16px;
   box-shadow:0 4px 0 rgba(30,12,60,.35)}
-#ballDots{display:flex;gap:5px;flex-wrap:wrap;max-width:60vw}
-.dot{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8a8a95,#2a2a33 70%);box-shadow:inset 0 -2px 0 rgba(0,0,0,.4)}
+#ballDots{display:flex;gap:4px;flex-wrap:wrap;max-width:min(60vw,300px);justify-content:center}
+.dot{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8a8a95,#2a2a33 70%);box-shadow:inset 0 -2px 0 rgba(0,0,0,.4)}
 .dot.used{opacity:.25}
 #ballNum{font-family:var(--display);font-size:24px;color:var(--gold);font-variant-numeric:tabular-nums}
 #iconBtn{pointer-events:auto;font:inherit;font-family:var(--display);font-size:18px;background:var(--purple);color:var(--ivory);border:3px solid var(--gold);
@@ -121,7 +121,7 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 
 <div class="hud" id="top">
   <div class="pill" id="lvl"><small>Level</small>1</div>
-  <div id="prog" aria-label="Blocks cleared"><div id="progFill"></div><div id="progTxt">0 / 0 blocks</div></div>
+  <div id="prog" aria-label="Blocks cleared"><div id="progFill"></div><div id="progTxt">0 / 0 pieces</div></div>
   <button type="button" id="iconBtn" aria-label="Restart level">↻</button>
 </div>
 <div class="hud" id="bottom">
@@ -132,7 +132,7 @@ button:focus-visible{outline:3px solid #fff;outline-offset:3px}
   <div class="card" role="dialog" aria-labelledby="t1">
     <svg class="crown" viewBox="0 0 84 60" aria-hidden="true"><path d="M42 4 L72 14 C72 36 60 50 42 57 C24 50 12 36 12 14 Z" fill="#f2b632" stroke="#1e0c3c" stroke-width="3" stroke-linejoin="round"/><path d="M30 30 L39 39 L56 21" fill="none" stroke="#3b1f6b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <h1 id="t1">Policy Protector</h1>
-    <p>Tap where you want the cannonball to go and knock <b>every block</b> off the platform before you run out. Clear a level, then test your insurance know-how.</p>
+    <p>Tap where you want the cannonball to go and knock <b>every piece</b> off the platforms, including the green islands that turn slowly. Clear a level, then answer a quick question about protecting your mortgage and your family.</p>
     <div class="legend" aria-label="Block types">
       <span class="chip"><span class="sw wood"></span>Wood</span>
       <span class="chip"><span class="sw glass"></span>Glass shatters</span>
@@ -255,14 +255,12 @@ const KIND={
   rubber:{mass:1,color:0xff3d7f},
   feather:{mass:.12,color:0xffe680},
 };
-const INTRO={glass:'Glass shatters when hit hard',rubber:'Rubber bounces and knocks into others',feather:'Feather blocks are light and fly fast'};
-// share of 1x1 blocks of each type per level; level 1 is all wood
+// share of cubes and barrels made of each material; level 1 is wood and glass only
 function mixFor(n){
-  if(n===1)return{};
-  if(n===2)return{glass:.5};
-  if(n===3)return{rubber:.4};
-  if(n===4)return{feather:.4};
-  return{glass:.2,rubber:.15,feather:.15};
+  if(n===1)return{glass:.35};
+  if(n===2)return{glass:.2,rubber:.3};
+  if(n===3)return{glass:.15,rubber:.15,feather:.3};
+  return{glass:.18,rubber:.12,feather:.12};
 }
 
 // ------------------------------------------------------------------ renderer + scene
@@ -286,7 +284,7 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x9a8466,.8));
 const sun=new THREE.DirectionalLight(0xfff3dc,1.05);
 sun.position.set(9,22,PZ+10);sun.target.position.set(0,0,PZ);
 sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
-Object.assign(sun.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:1,far:60});
+Object.assign(sun.shadow.camera,{left:-13,right:13,top:13,bottom:-13,near:1,far:70});sun.shadow.mapSize.set(2048,2048);
 sun.shadow.bias=-.0015;
 scene.add(sun,sun.target);
 
@@ -298,7 +296,7 @@ const mat=(color,o={})=>new THREE.MeshStandardMaterial({color,roughness:.62,meta
   const hill=mat(0x7cc37a,{flatShading:true}),far=mat(0x9fcfa0,{flatShading:true});
   const isl=(x,y,z,r,h,m)=>{const i=new THREE.Mesh(new THREE.ConeGeometry(r,h,7),m);i.position.set(x,y,z);i.rotation.x=Math.PI;scene.add(i);
     const g=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.98,.6,7),grass);g.position.set(x,y+h/2+.3,z);scene.add(g)};
-  isl(-22,-6,-48,6,8,hill);isl(26,-9,-60,8,10,hill);isl(-8,-16,-80,10,9,far);isl(40,-4,-30,4,6,hill);isl(-36,-10,-28,5,7,hill);
+  isl(-8,-16,-80,10,9,far);isl(40,-4,-30,4,6,hill);isl(-36,-10,-28,5,7,hill);
   const cloudM=mat(0xffffff,{roughness:1});
   const cloud=(x,y,z,s)=>{const g=new THREE.Group();for(let i=0;i<4;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),cloudM);m.position.set(i*1.1-1.6,Math.sin(i)*.3,0);m.scale.setScalar(1-.15*Math.abs(i-1.5));g.add(m)}g.position.set(x,y,z);g.scale.set(s,s*.6,s);scene.add(g);return g};
   window.__clouds=[cloud(-14,-8,-30,2.2),cloud(12,-11,-24,1.8),cloud(-30,6,-70,3),cloud(25,9,-80,3.5),cloud(5,-14,-45,2.6)];
@@ -334,27 +332,64 @@ world.addContactMaterial(new CANNON.ContactMaterial(mBall,mStone,{friction:.3,re
 for(const m of [mBlock,mBall,mStone,mRubber])world.addContactMaterial(new CANNON.ContactMaterial(mRubber,m,{friction:.6,restitution:m===mBall?.9:.8}));
 
 // ------------------------------------------------------------------ platforms
-// every level stands on one or more stone platforms {x,z,w,d,top}; top is the height of the upper surface
-let plats=[],platObjs=[];
+// stone platforms {x,z,w,d,top}, plus round green islands {round,x,z,r,top,swing,phase} that turn slowly left and right
+let plats=[],platObjs=[],swingT=0;
 const stoneM=mat(0x9a93b3),trimM=mat(PAL.gold,{metalness:.1,roughness:.4}),rockM=mat(0x8c7a64,{flatShading:true}),bannerM=mat(PAL.purple,{side:THREE.DoubleSide});
+const grassM=mat(0x5fbf5a),dirtM=mat(0x8a6a48,{flatShading:true}),flowerA=mat(0xffffff),flowerB=mat(0xffd23f),flowerGeo=new THREE.SphereGeometry(.12,8,6);
 function makePlats(list){
   plats=list;
   for(const p of list){
-    const g=new THREE.Group();
-    const top=new THREE.Mesh(new THREE.BoxGeometry(p.w,1,p.d),stoneM);top.position.y=-.5;top.receiveShadow=true;top.castShadow=true;g.add(top);
-    const trim=new THREE.Mesh(new THREE.BoxGeometry(p.w+.3,.22,p.d+.3),trimM);trim.position.y=-.95;g.add(trim);
-    const r=Math.min(p.w,p.d)*.42;
-    const pil=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.3,24,8,3),rockM);pil.position.y=-13;g.add(pil);
-    if(p.w>=5)for(const x of [-p.w/2+1.2,p.w/2-1.2]){const b=new THREE.Mesh(new THREE.PlaneGeometry(.9,1.8),bannerM);b.position.set(x,-1.9,p.d/2+.17);g.add(b)}
-    g.position.set(p.x,p.top,p.z);scene.add(g);
-    const body=new CANNON.Body({mass:0,material:mStone});body.addShape(new CANNON.Box(new CANNON.Vec3(p.w/2,.5,p.d/2)));
-    body.position.set(p.x,p.top-.5,p.z);world.addBody(body);
-    platObjs.push({g,body,top});
+    const g=new THREE.Group(),body=new CANNON.Body({mass:0,material:mStone});let top;
+    if(p.round){
+      top=new THREE.Mesh(new THREE.CylinderGeometry(p.r,p.r*.96,.5,28),grassM);top.position.y=-.25;top.receiveShadow=true;g.add(top);
+      const dirt=new THREE.Mesh(new THREE.ConeGeometry(p.r*.95,4.5,9),dirtM);dirt.rotation.x=Math.PI;dirt.position.y=-2.75;g.add(dirt);
+      // flowers round the rim make the turning easy to see
+      for(let i=0;i<10;i++){const a=i/10*Math.PI*2,f=new THREE.Mesh(flowerGeo,i%2?flowerA:flowerB);f.position.set(Math.cos(a)*(p.r-.2),.06,Math.sin(a)*(p.r-.2));g.add(f)}
+      body.addShape(new CANNON.Cylinder(p.r,p.r,.5,16),new CANNON.Vec3(),CYL_Q);body.position.set(p.x,p.top-.25,p.z);
+    }else{
+      top=new THREE.Mesh(new THREE.BoxGeometry(p.w,1,p.d),stoneM);top.position.y=-.5;top.receiveShadow=true;top.castShadow=true;g.add(top);
+      const trim=new THREE.Mesh(new THREE.BoxGeometry(p.w+.3,.22,p.d+.3),trimM);trim.position.y=-.95;g.add(trim);
+      const r=Math.min(p.w,p.d)*.42;
+      const pil=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.3,24,8,3),rockM);pil.position.y=-13;g.add(pil);
+      if(p.w>=5)for(const x of [-p.w/2+1.2,p.w/2-1.2]){const b=new THREE.Mesh(new THREE.PlaneGeometry(.9,1.8),bannerM);b.position.set(x,-1.9,p.d/2+.17);g.add(b)}
+      body.addShape(new CANNON.Box(new CANNON.Vec3(p.w/2,.5,p.d/2)));body.position.set(p.x,p.top-.5,p.z);
+    }
+    g.position.set(p.x,p.top,p.z);scene.add(g);world.addBody(body);
+    platObjs.push({g,body,top,p,th:0,om:0});
   }
 }
 function clearPlats(){for(const o of platObjs){scene.remove(o.g);world.removeBody(o.body)}platObjs=[];plats=[]}
-// a piece is still in play while it sits over some platform
-function onAPlatform(p){return plats.some(q=>Math.abs(p.x-q.x)<=q.w/2+.15&&Math.abs(p.z-q.z)<=q.d/2+.15&&p.y>q.top-.9)}
+// a piece is still in play while it sits over some platform or island
+function onAPlatform(p){return plats.some(q=>(q.round?(p.x-q.x)**2+(p.z-q.z)**2<=(q.r+.15)**2:Math.abs(p.x-q.x)<=q.w/2+.15&&Math.abs(p.z-q.z)<=q.d/2+.15)&&p.y>q.top-.9)}
+// islands swing back and forth; resting pieces ride along, pieces knocked loose keep the island's motion
+const qRot=new CANNON.Quaternion(),Y_AXIS=new CANNON.Vec3(0,1,0);
+function updateSwing(dt){
+  swingT+=dt;
+  for(const o of platObjs){
+    if(!o.p.swing)continue;
+    const th=.55*Math.sin(swingT*2*Math.PI/11+(o.p.phase||0));
+    o.om=dt>0?(th-o.th)/dt:0;o.th=th;o.g.rotation.y=th;
+  }
+  for(const b of blocks){
+    if(b.removed||b.down)continue;
+    const sleeping=b.body.sleepState===CANNON.Body.SLEEPING;
+    if(b.carry){
+      const o=b.carry.o;
+      if(!sleeping){const rx=b.body.position.x-o.p.x,rz=b.body.position.z-o.p.z;b.body.velocity.x+=o.om*rz;b.body.velocity.z-=o.om*rx;b.carry=null;continue}
+      const c=Math.cos(o.th),s=Math.sin(o.th),l=b.carry;
+      b.body.position.set(o.p.x+l.x*c+l.z*s,l.y,o.p.z-l.x*s+l.z*c);
+      qRot.setFromAxisAngle(Y_AXIS,o.th);qRot.mult(l.q,b.body.quaternion);
+    }else if(sleeping){
+      const q=b.body.position,o=platObjs.find(o=>o.p.swing&&(q.x-o.p.x)**2+(q.z-o.p.z)**2<=o.p.r**2&&q.y>o.p.top&&q.y<o.p.top+4);
+      if(o){
+        const c=Math.cos(-o.th),s=Math.sin(-o.th),rx=q.x-o.p.x,rz=q.z-o.p.z,qq=new CANNON.Quaternion();
+        qRot.setFromAxisAngle(Y_AXIS,-o.th);qRot.mult(b.body.quaternion,qq);
+        b.carry={o,x:rx*c+rz*s,y:q.y,z:-rx*s+rz*c,q:qq};
+      }
+    }
+  }
+}
+const ISL=[{round:1,x:-6.6,z:-19,r:2.2,top:1.2,swing:1,phase:0},{round:1,x:6.6,z:-19,r:2.2,top:1.2,swing:1,phase:Math.PI}];
 const PL={
   solo:  [{x:0,z:-13,w:8,d:4,top:0}],
   layers:[{x:0,z:-10.8,w:7,d:2.4,top:0},{x:0,z:-14.8,w:9,d:3,top:.3}],
@@ -363,6 +398,7 @@ const PL={
   pads:  [{x:-3.3,z:-11,w:2.2,d:2.2,top:-.4},{x:0,z:-11.8,w:2.4,d:2.4,top:.2},{x:3.3,z:-11,w:2.2,d:2.2,top:-.4},
           {x:-1.9,z:-15.4,w:2.6,d:2.4,top:1.2},{x:1.9,z:-15.4,w:2.6,d:2.4,top:1.2}],
 };
+const withIsl=k=>PL[k].concat(ISL);
 
 // ------------------------------------------------------------------ pieces
 let blocks=[],balls=[];
@@ -385,40 +421,76 @@ function prismGeo(w,h,d){
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.computeVertexNormals();return g;
 }
 const CYL_Q=new CANNON.Quaternion();CYL_Q.setFromAxisAngle(new CANNON.Vec3(1,0,0),-Math.PI/2);
-// shape: box [w,h,d] | cyl [r,h] upright | ball [r] | prism [w,h,d]; (x,y,z) is the bottom centre relative to the current platform
-let B={x:0,y:0,z:-13};
-const on=i=>{const p=plats[i];B={x:p.x,y:p.top,z:p.z}};
+const V=(x,y,z)=>new CANNON.Vec3(x,y,z);
+const cylShape=(body,r,h,y=0,n=12)=>body.addShape(new CANNON.Cylinder(r,r,h,n),V(0,y,0),CYL_Q);
+const part=(g,geo,m,x=0,y=0,z=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.castShadow=true;g.add(o);return o};
+const extrude=(shape,depth)=>{const g=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelThickness:.04,bevelSize:.04,bevelSegments:2,curveSegments:10});g.center();return g};
+// life-insurance pieces: each has a height h, a mass, a drawing and a physics shape centred at mid-height
+const heartShape=(()=>{const s=new THREE.Shape();s.moveTo(0,-.45);s.bezierCurveTo(-.15,-.3,-.55,-.1,-.5,.15);s.bezierCurveTo(-.45,.4,-.1,.45,0,.22);s.bezierCurveTo(.1,.45,.45,.4,.5,.15);s.bezierCurveTo(.55,-.1,.15,-.3,0,-.45);return s})();
+const shieldShape=(()=>{const s=new THREE.Shape();s.moveTo(-.45,.5);s.lineTo(.45,.5);s.lineTo(.45,0);s.quadraticCurveTo(.4,-.4,0,-.6);s.quadraticCurveTo(-.4,-.4,-.45,0);s.closePath();return s})();
+const SPECIAL={
+  pawn:{h:1.25,mass:.5,mesh(c){const g=new THREE.Group(),m=matCache[c];
+      part(g,new THREE.CylinderGeometry(.32,.34,.12,18),m,0,-.565);part(g,new THREE.CylinderGeometry(.18,.3,.8,18),m,0,-.2);part(g,new THREE.SphereGeometry(.24,16,12),m,0,.385);return g},
+    phys(b){cylShape(b,.3,.9,-.175);b.addShape(new CANNON.Sphere(.24),V(0,.385,0))}},
+  heart:{h:.9,mass:.35,mesh(c){const g=new THREE.Group();part(g,extrude(heartShape,.3),matCache[c]);return g},phys(b){b.addShape(new CANNON.Box(V(.47,.43,.19)))}},
+  key:{h:.6,mass:.3,mesh(c){const g=new THREE.Group(),m=matCache[c];
+      part(g,new THREE.TorusGeometry(.2,.07,10,20),m,-.32,.05);part(g,new THREE.BoxGeometry(.62,.13,.13),m,.15,.05);
+      part(g,new THREE.BoxGeometry(.1,.2,.13),m,.3,-.1);part(g,new THREE.BoxGeometry(.1,.14,.13),m,.42,-.07);return g},
+    phys(b){b.addShape(new CANNON.Box(V(.5,.3,.1)))}},
+  hourglass:{h:1.1,mass:.6,mesh(c){const g=new THREE.Group(),gm=matCache[PAL.gold];
+      const prof=[[0,-.5],[.36,-.5],[.3,-.38],[.1,0],[.3,.38],[.36,.5],[0,.5]].map(p=>new THREE.Vector2(p[0],p[1]));
+      part(g,new THREE.LatheGeometry(prof,18),kindMats.glass);part(g,new THREE.ConeGeometry(.26,.32,18),matCache[c],0,-.33);
+      part(g,new THREE.CylinderGeometry(.42,.42,.07,18),gm,0,-.515);part(g,new THREE.CylinderGeometry(.42,.42,.07,18),gm,0,.515);
+      for(const a of [0,2.1,4.2])part(g,new THREE.CylinderGeometry(.03,.03,1,6),gm,Math.cos(a)*.38,0,Math.sin(a)*.38);return g},
+    phys(b){cylShape(b,.42,1.1)}},
+  shield:{h:1.1,mass:.4,mesh(c){const g=new THREE.Group();part(g,extrude(shieldShape,.18),matCache[c]);
+      part(g,new THREE.BoxGeometry(.12,.55,.06),matCache[PAL.gold],0,0,.15);part(g,new THREE.BoxGeometry(.45,.12,.06),matCache[PAL.gold],0,.08,.15);return g},
+    phys(b){b.addShape(new CANNON.Box(V(.47,.55,.14)))}},
+  umbrella:{h:1.4,mass:.4,mesh(c){const g=new THREE.Group(),dark=matCache[PAL.purple];
+      part(g,new THREE.CylinderGeometry(.3,.32,.08,18),dark,0,-.66);part(g,new THREE.CylinderGeometry(.04,.04,1.05,8),matCache[PAL.ivory],0,-.12);
+      part(g,new THREE.ConeGeometry(.66,.42,10),matCache[c],0,.49);return g},
+    phys(b){cylShape(b,.3,.08,-.66);cylShape(b,.05,1,-.15,8);cylShape(b,.6,.3,.45)}},
+};
+// shape: box [w,h,d] | cyl [r,h] upright | ball [r] | prism [w,h,d] | a SPECIAL piece; (x,y,z) is the bottom centre on the current platform
+let B={x:0,y:0,z:-13,o:null};
+const on=i=>{const o=platObjs[i],p=o.p;B={x:p.x,y:p.top,z:p.z,o}};
+const onIsl=k=>on(platObjs.length-2+k);
 function addPiece(shape,dims,x,y,z,color,o={}){
-  const key=shape+dims.join('x');
-  if(!geoCache[key]){
-    let g;
-    if(shape==='box')g=new THREE.BoxGeometry(...dims);
-    else if(shape==='cyl')g=new THREE.CylinderGeometry(dims[0],dims[0],dims[1],18);
-    else if(shape==='ball')g=new THREE.SphereGeometry(dims[0],18,12);
-    else g=prismGeo(...dims);
-    geoCache[key]={g,e:shape==='ball'?null:new THREE.EdgesGeometry(g,30)};
-  }
   if(!matCache[color])matCache[color]=mat(color,color===PAL.gold?{metalness:.12,roughness:.35,emissive:0x3a2600}:{});
-  const kind=o.kind||'wood';
-  const mesh=new THREE.Mesh(geoCache[key].g,kindMats[kind]||matCache[color]);mesh.castShadow=kind!=='glass';mesh.receiveShadow=true;
-  if(geoCache[key].e)mesh.add(new THREE.LineSegments(geoCache[key].e,kind==='glass'?glassEdge:edgeMat));
-  if(o.crown)mesh.add(crownDeco(dims[0],dims[1]));
+  const sp=SPECIAL[shape],kind=sp?'wood':o.kind||'wood';
+  let mesh,vol,h;
+  if(sp){mesh=sp.mesh(color);h=sp.h}
+  else{
+    const key=shape+dims.join('x');
+    if(!geoCache[key]){
+      let g;
+      if(shape==='box')g=new THREE.BoxGeometry(...dims);
+      else if(shape==='cyl')g=new THREE.CylinderGeometry(dims[0],dims[0],dims[1],18);
+      else if(shape==='ball')g=new THREE.SphereGeometry(dims[0],18,12);
+      else g=prismGeo(...dims);
+      geoCache[key]={g,e:shape==='ball'?null:new THREE.EdgesGeometry(g,30)};
+    }
+    mesh=new THREE.Mesh(geoCache[key].g,kindMats[kind]||matCache[color]);mesh.castShadow=kind!=='glass';mesh.receiveShadow=true;
+    if(geoCache[key].e)mesh.add(new THREE.LineSegments(geoCache[key].e,kind==='glass'?glassEdge:edgeMat));
+    if(o.crown)mesh.add(crownDeco(dims[0],dims[1]));
+    if(shape==='box'){vol=dims[0]*dims[1]*dims[2];h=dims[1]}
+    else if(shape==='cyl'){vol=Math.PI*dims[0]**2*dims[1];h=dims[1]}
+    else if(shape==='ball'){vol=4/3*Math.PI*dims[0]**3;h=dims[0]*2}
+    else{vol=dims[0]*dims[1]*dims[2]/2;h=dims[1]}
+  }
   scene.add(mesh);
-  let vol,h;
-  if(shape==='box'){vol=dims[0]*dims[1]*dims[2];h=dims[1]}
-  else if(shape==='cyl'){vol=Math.PI*dims[0]**2*dims[1];h=dims[1]}
-  else if(shape==='ball'){vol=4/3*Math.PI*dims[0]**3;h=dims[0]*2}
-  else{vol=dims[0]*dims[1]*dims[2]/2;h=dims[1]}
-  const body=new CANNON.Body({mass:vol*(o.heavy?1.6:KIND[kind].mass),material:kind==='rubber'?mRubber:mBlock,sleepSpeedLimit:.25,sleepTimeLimit:.6,
+  const body=new CANNON.Body({mass:sp?sp.mass:vol*(o.heavy?1.6:KIND[kind].mass),material:kind==='rubber'?mRubber:mBlock,sleepSpeedLimit:.25,sleepTimeLimit:.6,
     linearDamping:kind==='feather'?.01:.04,angularDamping:shape==='ball'?.3:.06});
-  if(shape==='box')body.addShape(new CANNON.Box(new CANNON.Vec3(dims[0]/2,dims[1]/2,dims[2]/2)));
-  else if(shape==='cyl')body.addShape(new CANNON.Cylinder(dims[0],dims[0],dims[1],12),new CANNON.Vec3(),CYL_Q);
+  if(sp)sp.phys(body);
+  else if(shape==='box')body.addShape(new CANNON.Box(V(dims[0]/2,dims[1]/2,dims[2]/2)));
+  else if(shape==='cyl')cylShape(body,dims[0],dims[1]);
   else if(shape==='ball')body.addShape(new CANNON.Sphere(dims[0]));
-  else body.addShape(new CANNON.ConvexPolyhedron(prismPts(...dims).map(p=>new CANNON.Vec3(...p)),PRISM_FACES));
+  else body.addShape(new CANNON.ConvexPolyhedron(prismPts(...dims).map(p=>V(...p)),PRISM_FACES));
   body.position.set(B.x+x,B.y+y+h/2,B.z+z);
   world.addBody(body);body.sleep();
   mesh.position.copy(body.position);
   const b={mesh,body,kind,shape,down:false,hit:new Set()};blocks.push(b);body.blockRef=b;
+  if(B.o&&B.o.p.swing)b.carry={o:B.o,x:x,y:body.position.y,z:z,q:body.quaternion.clone()};
   body.addEventListener('collide',e=>{
     const v=Math.abs(e.contact.getImpactVelocityAlongNormal()),byBall=e.body.material===mBall;
     if(byBall&&v>3)sfx(kind==='rubber'?'boing':'knock',v);
@@ -465,19 +537,28 @@ const crown=(x,y,z)=>addBlock(1,1,1,x,y,z,PAL.gold,{crown:1,heavy:1});
 const orb=(x,y,z)=>addPiece('ball',[.4],x,y,z,PAL.gold);
 const barrel=(x,y,z,c)=>addPiece('cyl',[.45,1],x,y,z,c??nextCol(),{kind:pickKind()});
 const column=(x,y,z)=>addPiece('cyl',[.28,1.8],x,y,z,PAL.ivory);
+const beam=(x,y,z,w)=>addBlock(w,.25,1,x,y,z,PAL.purple);
 const roof=(x,y,z,w,c)=>addPiece('prism',[w,.9,1.1],x,y,z,c??PAL.crimson);
+const pawn=(x,y,z,c)=>addPiece('pawn',null,x,y,z,c??nextCol());
+const heart=(x,y,z)=>addPiece('heart',null,x,y,z,PAL.crimson);
+const key=(x,y,z)=>addPiece('key',null,x,y,z,PAL.gold);
+const hourglass=(x,y,z)=>addPiece('hourglass',null,x,y,z,PAL.ivory);
+const shield=(x,y,z)=>addPiece('shield',null,x,y,z,PAL.blue);
+const umbrella=(x,y,z,c)=>addPiece('umbrella',null,x,y,z,c??PAL.crimson);
 function tower(x,z,n,top=false){const c=nextCol(),c2=nextCol();for(let i=0;i<n;i++)cube(x,i,z,i%2?c2:c);if(top)crown(x,n,z);return n}
 function pyramid(x,z,base,top=false){let y=0;for(let r=base;r>0;r--,y++){const c=nextCol();for(let i=0;i<r;i++)cube(x-(r-1)/2+i,y,z,c)}if(top)crown(x,y,z)}
 function wall(x,z,w,h){for(let r=0;r<h;r++){const c=nextCol();for(let i=0;i<w;i++)cube(x-(w-1)/2+i,r,z,(i+r)%2?c:PAL.ivory)}}
-function barrels(x,z,base,top=true){let y=0;for(let r=base;r>0;r--,y++)for(let i=0;i<r;i++)barrel(x-(r-1)*.48+i*.96,y,z);if(top)orb(x,y,z)}
+function barrels(x,z,base,top=false){let y=0;for(let r=base;r>0;r--,y++)for(let i=0;i<r;i++)barrel(x-(r-1)*.48+i*.96,y,z);if(top)orb(x,y,z)}
+function table(x,z,w){cube(x-w/2+.5,0,z);cube(x+w/2-.5,0,z);beam(x,1,z,w);return 1.25}
 function house(x,z,c){addBlock(1.4,1,1,x,0,z,c??nextCol(),{kind:pickKind()});roof(x,1,z,1.6)}
-function colonnade(x,z,n,span){
+function colonnade(x,z,n,span,withRoof=true){
   for(let i=0;i<n;i++)column(x-span/2+i*span/(n-1),0,z);
-  addBlock(span+.8,.25,1,x,1.8,z,PAL.purple);roof(x,2.05,z,span+.6,PAL.gold);
+  beam(x,1.8,z,span+.8);if(withRoof)roof(x,2.05,z,span+.6,PAL.gold);
 }
 function coins(x,z,n){for(let i=0;i<n;i++)addPiece('cyl',[.42,.2],x,i*.2,z,PAL.gold)}
 // a row of dominoes running front to back: knock the front one and the row tips into the layer behind
 function dominoes(x,z,n){const c=nextCol();for(let i=0;i<n;i++)addBlock(.8,2,.22,x,0,z+.95-i*1.95/(n-1),i%2?c:PAL.ivory)}
+function family(x,z){pawn(x-.7,0,z,PAL.blue);pawn(x,0,z,PAL.crimson);pawn(x+.7,0,z,PAL.green)}
 function castle(x,z){
   tower(x-2.5,z,4);tower(x+2.5,z,4);
   wall(x,z,3,2);
@@ -486,29 +567,63 @@ function castle(x,z){
   cube(x-2.5,4,z,PAL.gold);cube(x+2.5,4,z,PAL.gold);
 }
 
-// hand-made levels, then generated ones
+// levels 1-20 introduce one new thing each, with plenty of balls; after that they are generated
+const INTROS=['',
+  'Wood and glass blocks. Glass shatters when you hit it hard.',
+  'New: rubber blocks bounce and knock into others.',
+  'New: feather blocks are light and fly fast.',
+  'New: beams. Knock one out and everything on top comes down.',
+  'New: barrels roll. The green islands turn slowly; clear them too.',
+  'New: columns. Tall and thin, easy to topple.',
+  'New: houses, the home your mortgage pays for.',
+  'New: gold orbs roll off whatever they sit on.',
+  'New: coin stacks, your family\'s savings.',
+  'New: dominoes. Hit the front one and the row tips into the layer behind.',
+  'New: family figures, the people your policy protects.',
+  'New: hearts.',
+  'New: house keys.',
+  'New: hourglasses. Term life lasts a set number of years.',
+  'New: shields, a wall of protection.',
+  'New: umbrellas, extra cover over the family.',
+  'Everything together. Protect the home.',
+  'Everything together, now with more layers.',
+  'Almost there. Use the dominoes.',
+  'Final intro level. Clear it all.',
+];
 const LEVELS=[
-  {balls:3,plats:PL.solo,build(){on(0);tower(0,0,5,true)}},
-  {balls:5,plats:PL.solo,build(){on(0);barrels(0,0,4)}},
-  {balls:6,plats:PL.layers,build(){on(0);wall(0,0,5,1);on(1);tower(-2.6,0,4);tower(2.6,0,4,true);house(0,0)}},
-  {balls:6,plats:PL.layers,build(){on(0);dominoes(-1.6,0,4);dominoes(1.6,0,4);on(1);barrels(-1.6,.9,2);barrels(1.6,.9,2);colonnade(0,-.6,3,2.4);tower(-3.6,0,3);tower(3.6,0,3)}},
-  {balls:8,plats:PL.trio,build(){on(0);barrels(0,0,3);on(1);barrels(0,0,3);on(2);tower(-3.2,0,4,true);tower(3.2,0,4,true);house(-1,0);house(1,0)}},
-  {balls:9,plats:PL.steps,build(){on(0);coins(-2,0,6);coins(2,0,6);house(0,0);on(1);wall(0,0,6,2);on(2);colonnade(-2.3,0,2,2);colonnade(2.3,0,2,2)}},
-  {balls:8,plats:PL.pads,build(){on(0);tower(0,0,3,true);on(1);barrels(0,0,2);on(2);tower(0,0,3,true);on(3);house(0,0);orb(0,1.9,0);on(4);barrels(0,0,2)}},
-  {balls:9,plats:PL.layers,build(){on(0);dominoes(0,0,4);house(-2.3,0);house(2.3,0);on(1);pyramid(0,0,4,true);tower(-3.6,0,4);tower(3.6,0,4)}},
-  {balls:9,plats:PL.trio,build(){on(0);colonnade(0,0,2,1.8);on(1);colonnade(0,0,2,1.8);on(2);wall(0,0,7,3)}},
-  {balls:11,plats:PL.steps,build(){on(0);house(-2.2,0);house(0,0);house(2.2,0);on(1);barrels(-2,0,3);barrels(2,0,3);on(2);castle(0,0)}},
+  {balls:26,plats:PL.solo,build(){on(0);wall(-.8,-.6,5,2);tower(3,.6,3)}},
+  {balls:26,plats:PL.solo,build(){on(0);pyramid(-.6,0,4);tower(3.2,-.8,3);tower(3.2,.8,2)}},
+  {balls:26,plats:PL.layers,build(){on(0);wall(0,0,5,1);on(1);pyramid(0,0,3);tower(-3.4,0,4);tower(3.4,0,4)}},
+  {balls:26,plats:PL.layers,build(){on(0);table(-1.7,0,2.6);cube(-1.7,1.25,0);table(1.7,0,2.6);cube(1.7,1.25,0);on(1);table(0,0,4);wall(0,1.25,3,1);tower(-3.6,0,3);tower(3.6,0,3)}},
+  {balls:26,plats:withIsl('layers'),build(){on(0);barrels(-1.6,0,2);barrels(1.6,0,2);on(1);barrels(0,0,3);tower(-3.6,0,3);tower(3.6,0,3);onIsl(0);barrels(0,0,2);onIsl(1);barrels(0,0,2)}},
+  {balls:26,plats:withIsl('steps'),build(){on(0);colonnade(0,0,2,2,false);cube(0,2.05,0);on(1);wall(0,0,6,1);on(2);colonnade(-2.3,0,2,1.6,false);colonnade(2.3,0,2,1.6,false);onIsl(0);column(-.5,0,0);column(.5,0,0);onIsl(1);tower(0,0,3)}},
+  {balls:26,plats:withIsl('layers'),build(){on(0);house(-2.2,0);house(0,0);house(2.2,0);on(1);house(-2.4,0);tower(0,0,3);house(2.4,0);onIsl(0);house(0,0);onIsl(1);house(0,0)}},
+  {balls:26,plats:withIsl('trio'),build(){on(0);barrels(0,0,2,true);on(1);barrels(0,0,2,true);on(2);tower(-3,0,3);orb(-3,3,0);house(0,0);tower(3,0,3);orb(3,3,0);onIsl(0);column(0,0,0);orb(0,1.8,0);onIsl(1);column(0,0,0);orb(0,1.8,0)}},
+  {balls:26,plats:withIsl('steps'),build(){on(0);coins(-2,0,6);house(0,0);coins(2,0,6);on(1);wall(0,0,6,1);coins(-3.4,0,4);coins(3.4,0,4);on(2);table(0,0,3);coins(0,1.25,5);onIsl(0);coins(0,0,7);onIsl(1);coins(0,0,7)}},
+  {balls:26,plats:withIsl('layers'),build(){on(0);dominoes(-1.6,0,4);dominoes(1.6,0,4);on(1);barrels(-1.6,.9,2);barrels(1.6,.9,2);house(0,-.6);onIsl(0);house(0,0);onIsl(1);tower(0,0,3)}},
+  {balls:24,plats:withIsl('layers'),build(){on(0);family(0,.3);on(1);house(-2.6,0);house(2.6,0);family(0,0);onIsl(0);family(0,0);onIsl(1);house(0,0)}},
+  {balls:24,plats:withIsl('trio'),build(){on(0);table(0,0,2.4);heart(0,1.25,0);on(1);table(0,0,2.4);heart(0,1.25,0);on(2);wall(0,0,5,1);heart(-1,1,0);heart(1,1,0);family(-3.4,0);onIsl(0);heart(-.6,0,0);heart(.6,0,0);onIsl(1);cube(0,0,0);heart(0,1,0)}},
+  {balls:24,plats:withIsl('steps'),build(){on(0);house(-2,0);key(0,0,0);house(2,0);on(1);table(-2,0,2.4);key(-2,1.25,0);table(2,0,2.4);key(2,1.25,0);on(2);house(-2.8,0);family(0,0);house(2.8,0);onIsl(0);key(0,0,0);onIsl(1);house(0,0)}},
+  {balls:24,plats:withIsl('pads'),build(){on(0);hourglass(0,0,0);on(1);tower(0,0,2);hourglass(0,2,0);on(2);hourglass(0,0,0);on(3);house(0,0);on(4);family(0,0);onIsl(0);hourglass(0,0,0);onIsl(1);hourglass(0,0,0)}},
+  {balls:24,plats:withIsl('layers'),build(){on(0);for(const x of [-2.4,-1.2,0,1.2,2.4])shield(x,0,.6);on(1);family(-1.6,0);house(1.6,0);tower(-3.8,0,2);tower(3.8,0,2);onIsl(0);shield(0,0,0);onIsl(1);shield(0,0,0)}},
+  {balls:24,plats:withIsl('layers'),build(){on(0);umbrella(-1.8,0,0);pawn(-1.8,0,.7);umbrella(1.8,0,0,PAL.blue);pawn(1.8,0,.7);on(1);umbrella(-2.5,0,0,PAL.green);family(0,0);umbrella(2.5,0,0);onIsl(0);umbrella(0,0,0);onIsl(1);umbrella(0,0,0,PAL.blue)}},
+  {balls:22,plats:withIsl('steps'),build(){on(0);family(-1.8,0);key(2,0,0);on(1);house(-2.4,0);heart(0,0,0);house(2.4,0);on(2);colonnade(0,0,2,2.4);coins(-3.4,0,4);coins(3.4,0,4);onIsl(0);umbrella(0,0,0);onIsl(1);hourglass(0,0,0)}},
+  {balls:22,plats:withIsl('trio'),build(){on(0);shield(-.6,0,.4);shield(.6,0,.4);on(1);barrels(0,0,2,true);on(2);house(-2.8,0);family(0,0);house(2.8,0);onIsl(0);heart(0,0,0);onIsl(1);key(0,0,0)}},
+  {balls:22,plats:withIsl('layers'),build(){on(0);dominoes(-1.6,0,4);dominoes(1.6,0,4);on(1);family(-1.6,.8);family(1.6,.8);house(0,-.6);hourglass(-3.8,0,0);hourglass(3.8,0,0);onIsl(0);umbrella(0,0,0);onIsl(1);coins(0,0,6)}},
+  {balls:24,plats:withIsl('steps'),build(){on(0);house(-2.2,0);umbrella(0,0,0);house(2.2,0);on(1);table(-2.3,0,2.4);heart(-2.3,1.25,0);family(1.6,0);on(2);castle(0,0);onIsl(0);family(0,0);onIsl(1);house(0,0);key(0,1.9,0)}},
 ];
 function rngFor(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
 function generated(n){
-  const r=rngFor(n*977+13),keys=['layers','trio','steps','pads'],plats=PL[keys[(r()*keys.length)|0]];
-  const small=[x=>tower(x,0,3+((r()*2)|0),r()<.5),x=>barrels(x,0,2),x=>house(x,0),x=>coins(x,0,5)];
-  const big=[x=>pyramid(x,0,3,r()<.4),x=>barrels(x,0,3),x=>colonnade(x,0,2,1.8),x=>{house(x-.9,0);house(x+.9,0)},x=>wall(x,0,3,2)];
+  const r=rngFor(n*977+13),keys=['layers','trio','steps','pads'],plats=withIsl(keys[(r()*keys.length)|0]);
+  const small=[x=>tower(x,0,3,r()<.5),x=>barrels(x,0,2,true),x=>house(x,0),x=>coins(x,0,5),x=>family(x,0),x=>{cube(x,0,0);heart(x,1,0)},x=>hourglass(x,0,0),x=>umbrella(x,0,0)];
+  const big=[x=>pyramid(x,0,3,r()<.4),x=>barrels(x,0,3),x=>colonnade(x,0,2,1.8),x=>{house(x-.9,0);house(x+.9,0)},x=>wall(x,0,3,2),x=>{family(x,0);shield(x,0,.8)}];
+  const pick=a=>a[(r()*a.length)|0];
   return{plats,balls:0,build(){
     plats.forEach((p,i)=>{
       on(i);
-      if(p.w<3.5)small[(r()*small.length)|0](0);
-      else{const slots=p.w>=8?[-2.8,0,2.8]:[-1.7,1.7];for(const x of slots)(r()<.5?big:small)[(r()*(r()<.5?big:small).length)|0](x)}
+      if(p.round)pick([x=>house(x,0),x=>barrels(x,0,2),x=>hourglass(x,0,0),x=>umbrella(x,0,0),x=>coins(x,0,6),x=>{cube(x,0,0);heart(x,1,0)}])(0);
+      else if(p.w<3.5)pick(small)(0);
+      else for(const x of p.w>=8?[-2.8,0,2.8]:[-1.7,1.7])pick(r()<.5?big:small)(x);
     });
   }};
 }
@@ -535,15 +650,15 @@ function loadLevel(n){
   clearLevel();ci=n*3;mix=mixFor(n);mixRng=rngFor(n*31+7);
   const d=levelDef(n);d.build();
   G_.total=blocks.length;
-  G_.ballsMax=d.balls||Math.min(12,Math.max(6,Math.ceil(G_.total/4)+2));
+  G_.ballsMax=d.balls||Math.min(18,Math.max(8,Math.ceil(G_.total/3)+4));
   G_.ballsLeft=G_.ballsMax;G_.score=0;G_.outT=0;G_.winT=0;G_.cool=0;G_.state='play';
   $('lvl').innerHTML='<small>Level</small>'+n;
   renderBalls();renderProg();
-  const fresh=Object.keys(mix).find(k=>!(save.seen||{})[k]);
-  if(fresh){save.seen=save.seen||{};save.seen[fresh]=1;toast(fresh,INTRO[fresh])}
+  save.seen=save.seen||{};
+  if(INTROS[n]&&!save.seen['L'+n]){save.seen['L'+n]=1;toast(INTROS[n])}
 }
 let toastT=0;
-function toast(kind,text){const t=$('toast');t.innerHTML=`<span class="sw ${kind}"></span>New: ${esc(text)}`;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3600)}
+function toast(text){const t=$('toast');t.textContent=text;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,4500)}
 function renderBalls(){
   const dots=$('ballDots');dots.innerHTML='';
   for(let i=0;i<G_.ballsMax;i++){const d=document.createElement('div');d.className='dot'+(i>=G_.ballsLeft?' used':'');dots.appendChild(d)}
@@ -552,7 +667,7 @@ function renderBalls(){
 function renderProg(){
   const cleared=blocks.filter(b=>b.down).length;
   $('progFill').style.width=(G_.total?cleared/G_.total*100:0)+'%';
-  $('progTxt').textContent=`${cleared} / ${G_.total} blocks`;
+  $('progTxt').textContent=`${cleared} / ${G_.total} pieces`;
 }
 
 // ------------------------------------------------------------------ aiming + firing
@@ -562,7 +677,8 @@ function pickPoint(cx,cy){
   const r=cv.getBoundingClientRect();
   ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);
   ray.setFromCamera(ndc,camera);
-  const hits=ray.intersectObjects(blocks.filter(b=>!b.down).map(b=>b.mesh).concat(platObjs.map(o=>o.top)),false);
+  ray.params.Line.threshold=.001;
+  const hits=ray.intersectObjects(blocks.filter(b=>!b.down).map(b=>b.mesh).concat(platObjs.map(o=>o.top)),true);
   if(hits.length)return hits[0].point.clone();
   const p=new THREE.Vector3();
   if(ray.ray.intersectPlane(aimPlane,p))return p;
@@ -677,6 +793,7 @@ function onFallen(b,pts=10){
   popup(b.mesh.position,'+'+pts);
 }
 function update(dt){
+  updateSwing(dt);
   world.step(1/60,dt,4);
   while(boostQ.length)boost(boostQ.shift());
   while(shatterQ.length)shatter(shatterQ.shift());
@@ -708,23 +825,35 @@ function update(dt){
   }
   if(window.__clouds)for(const [i,c] of window.__clouds.entries())c.position.x+=dt*(.25+i*.05)*(i%2?1:-1);
 }
+// mortgage protection life insurance: general facts, one per level
 const QUIZ=[
-  {q:'Does a standard homeowners policy cover flood damage?',a:['Yes','No'],c:1,e:'Usually not. Flood is normally a separate policy, through the National Flood Insurance Program or a private insurer.'},
-  {q:'What is a deductible?',a:['What you pay before insurance pays','Your monthly bill'],c:0,e:'Right: the deductible is your share of a claim. The monthly or yearly bill is the premium.'},
-  {q:'Auto liability coverage pays for…',a:['Damage you cause to others','Repairs to your own car'],c:0,e:'Liability covers injuries and damage you cause to other people. Your own car is covered by collision and comprehensive.'},
-  {q:'Term life insurance lasts…',a:['A set number of years','Your whole life'],c:0,e:'Term covers a set period, often 10 to 30 years. Whole and universal life are built to last a lifetime.'},
-  {q:'Does a standard homeowners policy cover earthquakes?',a:['Yes','No'],c:1,e:'Usually not. Earthquake coverage is normally a separate policy or an added endorsement.'},
-  {q:'A higher deductible usually means…',a:['A lower premium','A higher premium'],c:0,e:'Taking on more of each claim yourself usually lowers what you pay for the policy.'},
-  {q:'What does an umbrella policy add?',a:['Extra liability coverage','Extra rain damage coverage'],c:0,e:'An umbrella policy adds liability coverage above your home and auto limits, which helps if you are sued.'},
-  {q:'Who receives a life insurance payout?',a:['The beneficiary','The policyholder'],c:0,e:'The beneficiary is the person or people you name to receive the death benefit.'},
-  {q:'Can renters insurance cover your things away from home?',a:['Often, yes','Never'],c:0,e:'Many renters policies cover personal property away from home, up to a limit. Check the policy.'},
-  {q:'Should you review your coverage after a big life change?',a:['Yes','No need'],c:0,e:'A new home, marriage, baby or car is a good time to check your coverage still fits.'},
+  {q:'What does mortgage protection life insurance do?',a:['Pays toward your mortgage if you die','Protects your home from fire'],c:0,e:'It\'s life insurance meant to cover the mortgage if you pass away, so your family can keep the home. Fire and storm damage are homeowners insurance.'},
+  {q:'Does homeowners insurance pay off your mortgage if you die?',a:['Yes','No'],c:1,e:'No. Homeowners insurance covers damage to the house, not the loan. Life insurance is what can pay the mortgage.'},
+  {q:'Private mortgage insurance (PMI) mainly protects…',a:['The lender','Your family'],c:0,e:'PMI protects the lender if the loan isn\'t repaid. It does nothing for your family if you die.'},
+  {q:'Mortgage protection is usually a type of…',a:['Term life insurance','Car insurance'],c:0,e:'Most mortgage protection is term life, sized to the loan and set to last about as long as it.'},
+  {q:'With decreasing term coverage, the payout…',a:['Shrinks as the loan is paid down','Grows every year'],c:0,e:'Decreasing term follows the mortgage balance down over time, which usually keeps the premium low.'},
+  {q:'With level term coverage, the payout…',a:['Stays the same for the whole term','Drops to zero after a year'],c:0,e:'Level term pays the same amount for the full term, so anything left after the mortgage is paid goes to your family.'},
+  {q:'A common term length lines up with…',a:['Your mortgage, like 15 or 30 years','Your car loan'],c:0,e:'Many people pick a term that matches the years left on their mortgage.'},
+  {q:'Who can be the beneficiary of a regular term life policy?',a:['Anyone you choose, like your spouse','Only the bank'],c:0,e:'With a standard term policy you name the beneficiary, and they decide how to use the money. Some bank-sold mortgage policies pay the lender directly instead.'},
+  {q:'If two of you are on the mortgage, should you consider covering both?',a:['Yes','No, one is enough'],c:0,e:'If either income helps make the payments, losing either person could put the home at risk.'},
+  {q:'Life insurance payouts to a beneficiary are generally…',a:['Free of federal income tax','Taxed like a paycheck'],c:0,e:'In most cases the death benefit isn\'t subject to federal income tax. A tax professional can confirm your situation.'},
+  {q:'Some mortgage protection policies add a rider that helps if you…',a:['Become disabled and can\'t work','Move to a new town'],c:0,e:'A disability or income rider can help with payments if injury or illness stops you working. It\'s optional and costs extra.'},
+  {q:'A living benefits rider can pay part of the benefit early if you…',a:['Have a qualifying serious or terminal illness','Get a raise'],c:0,e:'Many policies let you use part of the benefit early for qualifying illnesses. Terms vary by policy.'},
+  {q:'A return of premium rider…',a:['Refunds premiums if you outlive the term','Lowers your mortgage rate'],c:0,e:'If you\'re still living when the term ends, you get back the premiums you paid. The policy costs more for it.'},
+  {q:'Do you have to buy mortgage protection from your lender?',a:['Yes','No'],c:1,e:'No. You can buy it through an independent agent and compare companies.'},
+  {q:'Is a medical exam always required?',a:['Not always','Always'],c:0,e:'Many policies use health questions instead of an exam. Policies with an exam can cost less if you\'re healthy.'},
+  {q:'When are premiums usually lowest?',a:['When you\'re younger and healthier','After you retire'],c:0,e:'Rates depend largely on age and health, so buying coverage earlier usually costs less.'},
+  {q:'Will life insurance from work always cover the mortgage?',a:['Not always','Yes, always'],c:0,e:'Work coverage is often one or two times salary and can end if you leave the job. Check whether it would really cover the loan.'},
+  {q:'If you refinance or buy a bigger home, you should…',a:['Review your coverage','Change nothing'],c:0,e:'A bigger loan can leave a gap. A quick review keeps coverage matched to what you owe.'},
+  {q:'If a borrower dies with no coverage, the mortgage…',a:['Still has to be paid','Is forgiven'],c:0,e:'The loan doesn\'t go away. The family or estate still has to keep up the payments or sell the home.'},
+  {q:'Besides the mortgage, life insurance can also help pay for…',a:['Bills, childcare and college','Nothing else'],c:0,e:'Many families size coverage to include lost income, childcare and education, not just the mortgage.'},
 ];
 function showQuiz(n){
   const q=QUIZ[(n-1)%QUIZ.length],box=$('qOpts');
   $('qText').textContent=q.q;$('qAns').hidden=true;box.innerHTML='';
-  q.a.forEach((txt,i)=>{const b=document.createElement('button');b.type='button';b.className='opt';b.textContent=txt;
-    b.onclick=()=>{stat('quizTotal');if(i===q.c)stat('quizRight');persist();box.querySelectorAll('button').forEach((x,j)=>{x.disabled=true;if(j===q.c)x.classList.add('right');else if(j===i)x.classList.add('wrong')});
+  const order=n%2?[1,0]:[0,1];
+  order.map(i=>[q.a[i],i]).forEach(([txt,i])=>{const b=document.createElement('button');b.type='button';b.className='opt';b.textContent=txt;b.dataset.i=i;
+    b.onclick=()=>{stat('quizTotal');if(i===q.c)stat('quizRight');persist();box.querySelectorAll('button').forEach(x=>{const j=+x.dataset.i;x.disabled=true;if(j===q.c)x.classList.add('right');else if(j===i)x.classList.add('wrong')});
       $('qAns').textContent=(i===q.c?'Correct! ':'Not quite. ')+q.e;$('qAns').hidden=false};
     box.appendChild(b)});
 }
@@ -780,7 +909,9 @@ function renderAgent2(){
 }
 function win(){
   G_.state='won';sfx('win');
-  const stars=G_.ballsLeft>=Math.max(2,Math.ceil(G_.ballsMax*.3))?3:G_.ballsLeft>=1?2:1;
+  // intro levels are generous: about 17 of 26 balls left is 3 stars, 9 is 2 stars
+  const stars=level<=20?(G_.ballsLeft>=Math.round(G_.ballsMax*.65)?3:G_.ballsLeft>=Math.round(G_.ballsMax*.35)?2:1)
+    :(G_.ballsLeft>=Math.max(2,Math.ceil(G_.ballsMax*.3))?3:G_.ballsLeft>=1?2:1);
   G_.score+=G_.ballsLeft*50;
   save.stars=save.stars||{};save.stars[level]=Math.max(save.stars[level]||0,stars);
   const before=Object.keys(save.best).length?myRank():RIVALS.length+1;
@@ -798,7 +929,7 @@ function win(){
 }
 function lose(left){
   G_.state='lost';
-  $('loseTxt').textContent=left===1?'1 block is still standing.':`${left} blocks are still standing.`;
+  $('loseTxt').textContent=left===1?'1 piece is still standing.':`${left} pieces are still standing.`;
   $('loseO').hidden=false;$('retryBtn').focus();
 }
 function resize(){
