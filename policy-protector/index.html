@@ -327,7 +327,7 @@ world.allowSleep=true;
 const mBlock=new CANNON.Material('block'),mBall=new CANNON.Material('ball'),mStone=new CANNON.Material('stone'),mRubber=new CANNON.Material('rubber');
 world.addContactMaterial(new CANNON.ContactMaterial(mBlock,mBlock,{friction:.35,restitution:.05}));
 world.addContactMaterial(new CANNON.ContactMaterial(mBlock,mStone,{friction:.22,restitution:.05}));
-world.addContactMaterial(new CANNON.ContactMaterial(mBall,mBlock,{friction:.3,restitution:.25}));
+world.addContactMaterial(new CANNON.ContactMaterial(mBall,mBlock,{friction:.3,restitution:.45}));
 world.addContactMaterial(new CANNON.ContactMaterial(mBall,mStone,{friction:.3,restitution:.35}));
 for(const m of [mBlock,mBall,mStone,mRubber])world.addContactMaterial(new CANNON.ContactMaterial(mRubber,m,{friction:.6,restitution:m===mBall?.9:.8}));
 
@@ -379,6 +379,7 @@ function updateSwing(dt){
       const c=Math.cos(o.th),s=Math.sin(o.th),l=b.carry;
       b.body.position.set(o.p.x+l.x*c+l.z*s,l.y,o.p.z-l.x*s+l.z*c);
       qRot.setFromAxisAngle(Y_AXIS,o.th);qRot.mult(l.q,b.body.quaternion);
+      b.body.aabbNeedsUpdate=true;                 // a sleeping body moved by hand must refresh its hit box, or balls pass through it
     }else if(sleeping){
       const q=b.body.position,o=platObjs.find(o=>o.p.swing&&(q.x-o.p.x)**2+(q.z-o.p.z)**2<=o.p.r**2&&q.y>o.p.top&&q.y<o.p.top+4);
       if(o){
@@ -443,7 +444,7 @@ const SPECIAL={
       part(g,new THREE.CylinderGeometry(.42,.42,.07,18),gm,0,-.515);part(g,new THREE.CylinderGeometry(.42,.42,.07,18),gm,0,.515);
       for(const a of [0,2.1,4.2])part(g,new THREE.CylinderGeometry(.03,.03,1,6),gm,Math.cos(a)*.38,0,Math.sin(a)*.38);return g},
     phys(b){cylShape(b,.42,1.1)}},
-  shield:{h:1.1,mass:.4,mesh(c){const g=new THREE.Group();part(g,extrude(shieldShape,.18),matCache[c]);
+  shield:{h:1.1,mass:.3,mesh(c){const g=new THREE.Group();part(g,extrude(shieldShape,.18),matCache[c]);
       part(g,new THREE.BoxGeometry(.12,.55,.06),matCache[PAL.gold],0,0,.15);part(g,new THREE.BoxGeometry(.45,.12,.06),matCache[PAL.gold],0,.08,.15);return g},
     phys(b){b.addShape(new CANNON.Box(V(.47,.55,.14)))}},
   umbrella:{h:1.4,mass:.4,mesh(c){const g=new THREE.Group(),dark=matCache[PAL.purple];
@@ -504,7 +505,7 @@ function addPiece(shape,dims,x,y,z,color,o={}){
   return b;
 }
 const addBlock=(w,h,d,x,y,z,color,o)=>addPiece('box',[w,h,d],x,y,z,color,o);
-const shatterQ=[],boostQ=[],freed=[];
+const shatterQ=[],boostQ=[],freed=[],blastQ=[];
 const shards=[],shardGeo=new THREE.TetrahedronGeometry(.16);
 function shatter(b){
   if(b.down)return;
@@ -515,6 +516,22 @@ function shatter(b){
     shards.push({m,v:new THREE.Vector3(v.x*.4+(Math.random()-.5)*7,v.y*.4+Math.random()*6,v.z*.4+(Math.random()-.5)*7),r:new THREE.Vector3(Math.random()*9,Math.random()*9,0),life:1.4});
   }
   sfx('glass');onFallen(b,15);
+}
+// a cannonball slamming into anything shoves nearby pieces outward and up, light ones most,
+// so a flat coin or a piece tucked beside something bigger can still be knocked loose
+const BLAST_R=1.6;
+function blast({p,v,dx:fx,dz:fz}){
+  const power=Math.min(1,v/12)*9;
+  for(const b of blocks){
+    if(b.down||b.removed)continue;
+    const q=b.body.position,dx=q.x-p.x,dy=q.y-p.y,dz=q.z-p.z,d=Math.hypot(dx,dy,dz);
+    if(d>BLAST_R)continue;
+    const k=power*(1-d/BLAST_R)/Math.sqrt(Math.max(.5,b.body.mass)),h=Math.hypot(dx,dz)||1;
+    // outward from the impact, carried along the way the ball was travelling
+    let ux=dx/h+fx,uz=dz/h+fz;const u=Math.hypot(ux,uz)||1;ux/=u;uz/=u;
+    b.body.wakeUp();b.body.velocity.x+=ux*k;b.body.velocity.z+=uz*k;b.body.velocity.y+=k*.45;
+    if(b.kind==='glass'&&k>3)shatterQ.push(b);
+  }
 }
 function boost([f,o]){
   if(o.removed)return;
@@ -605,7 +622,7 @@ const LEVELS=[
   {balls:24,plats:withIsl('trio'),build(){on(0);table(0,0,2.4);heart(0,1.25,0);on(1);table(0,0,2.4);heart(0,1.25,0);on(2);wall(0,0,5,1);heart(-1,1,0);heart(1,1,0);family(-3.4,0);onIsl(0);heart(-.6,0,0);heart(.6,0,0);onIsl(1);cube(0,0,0);heart(0,1,0)}},
   {balls:24,plats:withIsl('steps'),build(){on(0);house(-2,0);key(0,0,0);house(2,0);on(1);table(-2,0,2.4);key(-2,1.25,0);table(2,0,2.4);key(2,1.25,0);on(2);house(-2.8,0);family(0,0);house(2.8,0);onIsl(0);key(0,0,0);onIsl(1);house(0,0)}},
   {balls:24,plats:withIsl('pads'),build(){on(0);hourglass(0,0,0);on(1);tower(0,0,2);hourglass(0,2,0);on(2);hourglass(0,0,0);on(3);house(0,0);on(4);family(0,0);onIsl(0);hourglass(0,0,0);onIsl(1);hourglass(0,0,0)}},
-  {balls:24,plats:withIsl('layers'),build(){on(0);for(const x of [-2.4,-1.2,0,1.2,2.4])shield(x,0,.6);on(1);family(-1.6,0);house(1.6,0);tower(-3.8,0,2);tower(3.8,0,2);onIsl(0);shield(0,0,0);onIsl(1);shield(0,0,0)}},
+  {balls:24,plats:withIsl('layers'),build(){on(0);for(const x of [-2.4,-1.2,0,1.2,2.4])shield(x,0,-.2);on(1);family(-1.6,0);house(1.6,0);tower(-3.8,0,2);tower(3.8,0,2);onIsl(0);shield(0,0,0);onIsl(1);shield(0,0,0)}},
   {balls:24,plats:withIsl('layers'),build(){on(0);umbrella(-1.8,0,0);pawn(-1.8,0,.7);umbrella(1.8,0,0,PAL.blue);pawn(1.8,0,.7);on(1);umbrella(-2.5,0,0,PAL.green);family(0,0);umbrella(2.5,0,0);onIsl(0);umbrella(0,0,0);onIsl(1);umbrella(0,0,0,PAL.blue)}},
   {balls:22,plats:withIsl('steps'),build(){on(0);family(-1.8,0);key(2,0,0);on(1);house(-2.4,0);heart(0,0,0);house(2.4,0);on(2);colonnade(0,0,2,2.4);coins(-3.4,0,4);coins(3.4,0,4);onIsl(0);umbrella(0,0,0);onIsl(1);hourglass(0,0,0)}},
   {balls:22,plats:withIsl('trio'),build(){on(0);shield(-.6,0,.4);shield(.6,0,.4);on(1);barrels(0,0,2,true);on(2);house(-2.8,0);family(0,0);house(2.8,0);onIsl(0);heart(0,0,0);onIsl(1);key(0,0,0)}},
@@ -642,7 +659,7 @@ function persist(){try{localStorage.setItem('policyProtector',JSON.stringify({le
 function clearLevel(){
   for(const b of blocks){scene.remove(b.mesh);if(!b.removed)world.removeBody(b.body)}
   clearPlats();
-  for(const s of shards)scene.remove(s.m);shards.length=0;shatterQ.length=0;boostQ.length=0;
+  for(const s of shards)scene.remove(s.m);shards.length=0;shatterQ.length=0;boostQ.length=0;blastQ.length=0;
   for(const b of balls){scene.remove(b.mesh);world.removeBody(b.body)}
   blocks=[];balls=[];
 }
@@ -687,7 +704,7 @@ function pickPoint(cx,cy){
 function muzzle(){return pivot.localToWorld(new THREE.Vector3(0,0,-1.95))}
 function launchVelocity(from,to){
   const d=to.clone().sub(from),dist=d.length();
-  const T=Math.min(1,Math.max(.25,dist/42));
+  const T=Math.min(1.2,Math.max(.75,dist/30));         // a lob, so shots drop onto low pieces instead of skimming in
   return d.multiplyScalar(1/T).add(new THREE.Vector3(0,.5*G*T,0));
 }
 function aimAt(p){
@@ -700,13 +717,18 @@ const ballGeo=new THREE.SphereGeometry(BALL_R,20,14),ballMat=mat(0x24242c,{metal
 let recoil=0;
 function fireAt(p){
   if(G_.state!=='play'||G_.ballsLeft<=0||G_.cool>0)return false;
+  p=p.clone();p.y+=BALL_R*.3;                       // aim the ball's centre just above the spot tapped, so it lands on it
   aimAt(p);pivot.updateMatrixWorld(true);
   const from=muzzle(),v=launchVelocity(from,p);
   const body=new CANNON.Body({mass:14,material:mBall,linearDamping:.01});
   body.addShape(new CANNON.Sphere(BALL_R));body.position.set(from.x,from.y,from.z);body.velocity.set(v.x,v.y,v.z);
   world.addBody(body);
   const mesh=new THREE.Mesh(ballGeo,ballMat);mesh.castShadow=true;scene.add(mesh);
-  balls.push({mesh,body,age:0});
+  const ball={mesh,body,age:0,lastBlast:-1,slow:0};balls.push(ball);
+  body.addEventListener('collide',e=>{
+    const v=Math.abs(e.contact.getImpactVelocityAlongNormal());
+    if(v>6&&ball.age-ball.lastBlast>.2){ball.lastBlast=ball.age;const bv=body.velocity,bh=Math.hypot(bv.x,bv.z)||1;blastQ.push({p:body.position.clone(),v,t:.06,dx:bv.x/bh,dz:bv.z/bh})}
+  });
   G_.ballsLeft--;G_.cool=.32;G_.outT=0;recoil=1;renderBalls();
   smoke(from,v.clone().normalize());
   sfx('boom');
@@ -796,6 +818,8 @@ function update(dt){
   updateSwing(dt);
   world.step(1/60,dt,4);
   while(boostQ.length)boost(boostQ.shift());
+  // the shove lands a moment after impact, once the ball has bounced off, so a heavy ball can't pin the piece down
+  for(let i=blastQ.length-1;i>=0;i--)if((blastQ[i].t-=dt)<=0)blast(blastQ.splice(i,1)[0]);
   while(shatterQ.length)shatter(shatterQ.shift());
   wakeNeighbours();
   for(let i=shards.length-1;i>=0;i--){const s=shards[i];s.life-=dt;s.v.y-=G*dt;s.m.position.addScaledVector(s.v,dt);s.m.rotation.x+=s.r.x*dt;s.m.rotation.y+=s.r.y*dt;if(s.life<=0){scene.remove(s.m);shards.splice(i,1)}}
@@ -805,7 +829,12 @@ function update(dt){
     if(!b.down&&!b.removed&&!onAPlatform(b.body.position))onFallen(b);
   }
   for(const b of balls){b.mesh.position.copy(b.body.position);b.mesh.quaternion.copy(b.body.quaternion);b.age+=dt}
-  for(const b of balls)if(b.body.position.y<-40||b.age>9){scene.remove(b.mesh);world.removeBody(b.body);b.gone=true}
+  // a spent ball that has slowed to a roll is cleared away, so it can never sit on a piece and pin it down
+  for(const b of balls){
+    b.slow=b.age>.4&&b.body.velocity.length()<2.5?b.slow+dt:0;
+    if(b.slow>.5){smoke(new THREE.Vector3().copy(b.body.position),new THREE.Vector3(0,1,0))}
+    if(b.body.position.y<-40||b.age>9||b.slow>.5){scene.remove(b.mesh);world.removeBody(b.body);b.gone=true}
+  }
   balls=balls.filter(b=>!b.gone);
   for(const b of blocks)if(b.down&&b.body.position.y<-60&&b.body.type!==CANNON.Body.STATIC){b.body.sleep()}
   for(let i=puffs.length-1;i>=0;i--){const p=puffs[i];p.life-=dt;p.m.position.addScaledVector(p.v,dt);p.v.multiplyScalar(.92);p.m.scale.setScalar(.6+(1-p.life)*1.4);p.m.material.opacity=Math.max(0,p.life)*.9;if(p.life<=0){scene.remove(p.m);p.m.material.dispose();puffs.splice(i,1)}}
@@ -989,6 +1018,6 @@ ci=level*3;mix=mixFor(level);mixRng=rngFor(level*31+7);{const d=levelDef(level);
 $('lvl').innerHTML='<small>Level</small>'+level;
 openAgent();
 requestAnimationFrame(frame);
-window.__cc={showPrize,get save(){return save},get G(){return G_},get blocks(){return blocks},fireAt:(x,y,z)=>fireAt(new THREE.Vector3(x,y,z)),play,update};
+window.__cc={showPrize,get save(){return save},get G(){return G_},get blocks(){return blocks},get balls(){return balls},get plats(){return plats},fireAt:(x,y,z)=>fireAt(new THREE.Vector3(x,y,z)),play,update};
 })();
 </script>
